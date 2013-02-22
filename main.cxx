@@ -17,6 +17,8 @@ void OnCharDn(unsigned char, int, int);
 void OnCharUp(unsigned char, int, int);
 void OnMotion(int, int);
 
+unsigned int gSallyTex, gRopeTex;
+
 class Bell
 {
 public:
@@ -67,15 +69,70 @@ int main(int argc, char** argv)
 
   glutIdleFunc(OnIdle);
 
-  // glEnable(GL_TEXTURE_2D);
-  // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  unsigned char tex[128][128][3];
+  for(int x = 0; x < 128; ++x){
+    for(int y = 0; y < 128; ++y){
+      if(y < 128/3){
+	tex[y][x][0] = 255;
+	tex[y][x][1] = 0;
+	tex[y][x][2] = 0;
+      }
+      else if(y > (2*128)/3){
+	tex[y][x][0] = 0;
+	tex[y][x][1] = 0;
+	tex[y][x][2] = 255;
+      }
+      else{
+	tex[y][x][0] = 255;
+	tex[y][x][1] = 255;
+	tex[y][x][2] = 255;
+      }
+    }
+  }
 
-  // glTexImage2D(GL_TEXTURE_2D, 0, 1, 128, 128, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, tex);
+  glGenTextures(1, &gSallyTex);
+  std::cout << "SALLY " << gSallyTex << std::endl;
+  glBindTexture(GL_TEXTURE_2D, gSallyTex);
+
+  glEnable(GL_TEXTURE_2D);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, 3, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, tex);
+
+
+
+  unsigned char texrope[128][128][3];
+  for(int x = 0; x < 128; ++x){
+    for(int y = 0; y < 128; ++y){
+      if(y < 128/2){
+	texrope[y][x][0] = 0;
+	texrope[y][x][1] = 0;
+	texrope[y][x][2] = 0;
+      }
+      else{
+	texrope[y][x][0] = 255;
+	texrope[y][x][1] = 255;
+	texrope[y][x][2] = 255;
+      }
+    }
+  }
+
+  glGenTextures(1, &gRopeTex);
+  std::cout << "ROPE " << gRopeTex << std::endl;
+
+  glEnable(GL_TEXTURE_2D);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+  glBindTexture(GL_TEXTURE_2D, gRopeTex);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, 3, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, texrope);
+
 
   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-  //  glEnable(GL_CULL_FACE);
+  glEnable(GL_CULL_FACE);
 
   glutFullScreen();
 
@@ -155,13 +212,46 @@ void OnDraw()
 
     glTranslated(0, 0, -20+10*gBells[n].ExtraRope());
 
+    glBindTexture(GL_TEXTURE_2D, gSallyTex);
+    glEnable(GL_TEXTURE_2D);
+
+    glMatrixMode(GL_TEXTURE);
+      glLoadIdentity();
+      glScaled(1, 5, 1);
+      glRotated(-30, 0, 0, 1);
+    glMatrixMode(GL_MODELVIEW); 
+
     GLUquadric* q = gluNewQuadric();
-    glColor3d(.5, 0, .5);
+    gluQuadricTexture(q, GLU_TRUE);
+    //    glColor3d(.5, 0, .5);
+    glColor3d(1, 1, 1);
     gluCylinder(q, 1, 1, 10, 20, 20);
+
+    // Tops and bottoms
+
+    glMatrixMode(GL_TEXTURE);
+      glLoadIdentity();
+      glScaled(1, 1, 1);
+      //      glRotated(-30, 0, 0, 1);
+    glMatrixMode(GL_MODELVIEW); 
+
     glTranslated(0, 0, 10);
     gluCylinder(q, 1, 0, 2, 20, 20);
     glTranslated(0, 0, -12);
     gluCylinder(q, 0, 1, 2, 20, 20);
+
+    // Rope
+    //    glDisable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, gRopeTex);
+    glEnable(GL_TEXTURE_2D);
+
+    /*
+    glMatrixMode(GL_TEXTURE);
+      glLoadIdentity();
+      //      glScaled(1, 20, 1);
+      //      glRotated(-20, 0, 0, 1);
+    glMatrixMode(GL_MODELVIEW); 
+    */
 
     glTranslated(0, 0, -20);
     glColor3d(.75, .75, 0);
