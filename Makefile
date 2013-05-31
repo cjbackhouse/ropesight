@@ -1,2 +1,2 @@
 all:
-	g++ *.cxx -lglut -lGLU -orsight -g -O3
+	g++ *.cxx -lglut -lGLU -lGL -orsight -g -O3
