@@ -2,6 +2,8 @@
 
 #include "keys.h"
 
+#include "Rope.h"
+
 #include <cmath>
 #include <iostream>
 
@@ -43,6 +45,7 @@ protected:
 };
 
 Bell gBells[12];
+Rope gRopes[12];
 
 long gStartTime;
 
@@ -73,24 +76,27 @@ int main(int argc, char** argv)
   for(int x = 0; x < 128; ++x){
     for(int y = 0; y < 128; ++y){
       if(y < 128/3){
-	tex[y][x][0] = 255;
+	tex[y][x][0] = 255-rand()%128;
 	tex[y][x][1] = 0;
 	tex[y][x][2] = 0;
       }
       else if(y > (2*128)/3){
 	tex[y][x][0] = 0;
 	tex[y][x][1] = 0;
-	tex[y][x][2] = 255;
+	tex[y][x][2] = 255-rand()%128;
       }
       else{
-	tex[y][x][0] = 255;
-	tex[y][x][1] = 255;
-	tex[y][x][2] = 255;
+	const int r = rand()%128;
+	tex[y][x][0] = 255-r;
+	tex[y][x][1] = 255-r;
+	tex[y][x][2] = 255-r;
       }
     }
   }
 
   glGenTextures(1, &gSallyTex);
+  glGenTextures(1, &gRopeTex);
+
   std::cout << "SALLY " << gSallyTex << std::endl;
   glBindTexture(GL_TEXTURE_2D, gSallyTex);
 
@@ -105,7 +111,7 @@ int main(int argc, char** argv)
   unsigned char texrope[128][128][3];
   for(int x = 0; x < 128; ++x){
     for(int y = 0; y < 128; ++y){
-      if(y < 128/2){
+      if(y < 128/4){
 	texrope[y][x][0] = 0;
 	texrope[y][x][1] = 0;
 	texrope[y][x][2] = 0;
@@ -118,14 +124,12 @@ int main(int argc, char** argv)
     }
   }
 
-  glGenTextures(1, &gRopeTex);
   std::cout << "ROPE " << gRopeTex << std::endl;
 
+  glBindTexture(GL_TEXTURE_2D, gRopeTex);
   glEnable(GL_TEXTURE_2D);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-  glBindTexture(GL_TEXTURE_2D, gRopeTex);
 
   glTexImage2D(GL_TEXTURE_2D, 0, 3, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, texrope);
 
@@ -164,6 +168,9 @@ void OnIdle()
   for(int i = 0; i < 12; ++i)
     gBells[i].Update(dt);
 
+  for(int i = 0; i < 12; ++i)
+    gRopes[i].Update(dt);
+
   if(keys.left) gLookAngle -= dt;
   if(keys.right) gLookAngle += dt;
 
@@ -193,13 +200,54 @@ void OnDraw()
   glLightfv(GL_LIGHT0, GL_POSITION, p);
   glEnable(GL_LIGHT0);
 
-  glClearColor(.75, .75, .75, 0);
+  glClearColor(.5, .75, 1, 0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glLoadIdentity();
 
-  //  gluLookAt(20, 20, 20, 0, 0, 0, 0, 0, 1);
-  gluLookAt(40, 0, 0, 40-cos(gLookAngle), sin(gLookAngle), 0, 0, 0, 1);
+  //  gluLookAt(40, 0, 0, 40-cos(gLookAngle), sin(gLookAngle), 0, 0, 0, 1);
+
+  gluLookAt(100, 0, 0, 40-cos(gLookAngle), sin(gLookAngle), 0, 0, 0, 1);
+
+  /*
+  glColor3d(.5, .5, .5);
+  glBegin(GL_QUADS);
+    // Floor
+    glNormal3d(0, 0, 1);
+    glVertex3d(-30, -30, -50);
+    glVertex3d(+30, -30, -50);
+    glVertex3d(+30, +30, -50);
+    glVertex3d(-30, +30, -50);
+
+    // Back wall
+    glNormal3d(1, 0, 0);
+    glVertex3d(-30, -30, -50);
+    glVertex3d(-30, +30, -50);
+    glVertex3d(-30, +30, +50);
+    glVertex3d(-30, -30, +50);
+
+    // Left wall
+    glNormal3d(0, 1, 0);
+    glVertex3d(-30, -30, -50);
+    glVertex3d(-30, -30, +50);
+    glVertex3d(+30, -30, +50);
+    glVertex3d(+30, -30, -50);
+
+    // Right wall
+    glNormal3d(0, -1, 0);
+    glVertex3d(-30, +30, -50);
+    glVertex3d(+30, +30, -50);
+    glVertex3d(+30, +30, +50);
+    glVertex3d(-30, +30, +50);
+
+    // Ceiling
+    glNormal3d(0, 0, -1);
+    glVertex3d(-30, -30, +50);
+    glVertex3d(-30, +30, +50);
+    glVertex3d(+30, +30, +50);
+    glVertex3d(+30, -30, +50);
+  glEnd();
+  */
 
   glTranslated(0, 0, -5);
 
@@ -210,10 +258,18 @@ void OnDraw()
     glRotated(-n*30, 0, 0, 1);
     glTranslated(20, 0, 0);
 
-    glTranslated(0, 0, -20+10*gBells[n].ExtraRope());
+    glBindTexture(GL_TEXTURE_2D, gRopeTex);
+    glEnable(GL_TEXTURE_2D);
+
+    glTranslated(0, 0, -40+20*gBells[n].ExtraRope());
+    gRopes[n].SetTop(XYZ(0, 0, -40+20*gBells[n].ExtraRope()));
+    //    gRopes[n].SetBottom(XYZ(2, 0, -40+20*gBells[n].ExtraRope()+5));
+    //    gRopes[n].Draw();
 
     glBindTexture(GL_TEXTURE_2D, gSallyTex);
     glEnable(GL_TEXTURE_2D);
+
+    glTranslated(0, 0, -40+20*gBells[n].ExtraRope());
 
     glMatrixMode(GL_TEXTURE);
       glLoadIdentity();
@@ -232,7 +288,7 @@ void OnDraw()
     glMatrixMode(GL_TEXTURE);
       glLoadIdentity();
       glScaled(1, 1, 1);
-      //      glRotated(-30, 0, 0, 1);
+      glRotated(-45, 0, 0, 1);
     glMatrixMode(GL_MODELVIEW); 
 
     glTranslated(0, 0, 10);
@@ -253,14 +309,22 @@ void OnDraw()
     glMatrixMode(GL_MODELVIEW); 
     */
 
-    glTranslated(0, 0, -20);
+    glTranslated(0, 0, 5); // get inside sally
     glColor3d(.75, .75, 0);
-    gluCylinder(q, .2, .2, 100, 20, 20);
+    gluCylinder(q, .2, .2, 80, 20, 20);
+
+    glTranslated(0, 0, -40);
+    glColor3d(.75, .75, 0);
+    gluCylinder(q, .2, .2, 100, 20, 40);
+
     gluDeleteQuadric(q);
 
     glPopMatrix();
   }
- 
+
+  //  glDisable(GL_TEXTURE_2D);
+  //  glDisable(GL_CULL_FACE);
+  //  gRope.Draw();
 
   glutSwapBuffers();
 }
