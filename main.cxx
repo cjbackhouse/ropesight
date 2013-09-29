@@ -5,7 +5,11 @@
 #include "Rope.h"
 
 #include <cmath>
+#include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
+
+#include <gst/gst.h>
 
 Keys keys;
 
@@ -21,10 +25,19 @@ void OnMotion(int, int);
 
 unsigned int gSallyTex, gRopeTex;
 
+GstElement* play[12] = {0,};
+GMainLoop* loop;
+
 class Bell
 {
 public:
-  Bell() : fGone(false), fAngVel(0), fAngle(3) {}
+  Bell() : fGone(false), fAngVel(0), fAngle(3), fHand(true), fPlaying(false)
+  {
+    // Gross hack to assign them correctly
+    static int i = 0;
+    fBell = i;
+    ++i;
+  }
   void Go()
   {
     if(!fGone) fGone = true;
@@ -34,6 +47,28 @@ public:
     if(fGone){
       fAngVel -= 2*dt*sin(fAngle);
       fAngle += dt*fAngVel;
+
+      if(fHand){
+	if(fAngle < 0){
+	  fHand = false;
+	  gst_element_set_state(play[fBell], GST_STATE_PLAYING);
+	  fPlaying = true;
+	}
+      }
+      else{
+	if(fAngle > 0){
+	  fHand = true;
+	  gst_element_set_state(play[fBell], GST_STATE_PLAYING);
+	  fPlaying = true;
+	}
+      }
+
+      // Try and "preload" the seeking
+      if(fPlaying && fabs(fAngle) > 2){
+	gst_element_set_state(play[fBell], GST_STATE_NULL);
+	gst_element_seek(play[fBell], 1, GST_FORMAT_DEFAULT, GST_SEEK_FLAG_FLUSH, GST_SEEK_TYPE_SET, 0, GST_SEEK_TYPE_SET, -1);
+	fPlaying = false;
+      }
     }
   }
   double Angle() const {return fAngle;}
@@ -42,6 +77,9 @@ protected:
   bool fGone;
   double fAngVel;
   double fAngle;
+  int fBell;
+  bool fHand;
+  bool fPlaying;
 };
 
 Bell gBells[12];
@@ -54,6 +92,16 @@ double gLookAngle = 0;
 int main(int argc, char** argv)
 {
   glutInit(&argc, argv);
+
+  gst_init(&argc, &argv);
+  for(int i = 0; i < 12; ++i){
+    play[i] = gst_element_factory_make("playbin", "play");
+    char numstr[20];
+    sprintf(numstr, "%d", i);
+    g_object_set(G_OBJECT(play[i]), "uri", 
+		 (std::string("file:///home/bckhouse/Projects/Ropesight/audio/tbell_")+numstr+".wav").c_str(), NULL);
+  }
+  loop = g_main_loop_new(0, false);
 
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);
   glutInitWindowSize(800, 600);
@@ -141,6 +189,10 @@ int main(int argc, char** argv)
   glutFullScreen();
 
   glutMainLoop();
+
+  for(int i = 0; i < 12; ++i) gst_element_set_state(play[i], GST_STATE_NULL);
+  gst_object_unref(GST_OBJECT(play));
+
   return 0;
 }
 
@@ -149,6 +201,8 @@ int main(int argc, char** argv)
 using namespace std;
 void OnIdle()
 {
+  while(g_main_context_iteration(0, false)){}
+
   static bool once = true;
   if(once){
     once = false;
@@ -177,6 +231,8 @@ void OnIdle()
   glutPostRedisplay();
 
   cout << int(1/dt) << " FPS\r" << flush;
+
+  while(g_main_context_iteration(0, false)){}
 }
 
 void OnSize(int x, int y)
