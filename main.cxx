@@ -45,7 +45,7 @@ public:
   void Update(double dt)
   {
     if(fGone){
-      fAngVel -= 2*dt*sin(fAngle);
+      fAngVel -= 4*dt*sin(fAngle);
       fAngle += dt*fAngVel;
 
       if(fHand){
@@ -313,6 +313,10 @@ void OnDraw()
 
     glRotated(-n*30, 0, 0, 1);
     glTranslated(20, 0, 0);
+
+    // Rotate back so that the "seam" on the sally is always in the same
+    // place. Away from the camera.
+    glRotated(+n*30, 0, 0, 1);
 
     glBindTexture(GL_TEXTURE_2D, gRopeTex);
     glEnable(GL_TEXTURE_2D);
