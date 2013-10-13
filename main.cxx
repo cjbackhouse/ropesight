@@ -25,7 +25,9 @@ void OnMotion(int, int);
 
 unsigned int gSallyTex, gRopeTex;
 
-GstElement* play[12] = {0,};
+const int kNumBells = 8;
+
+GstElement* play[kNumBells] = {0,};
 GMainLoop* loop;
 
 class Bell
@@ -107,8 +109,8 @@ protected:
   bool fPulling;
 };
 
-Bell gBells[12];
-Rope gRopes[12];
+Bell gBells[kNumBells];
+Rope gRopes[kNumBells];
 
 long gStartTime;
 
@@ -119,7 +121,7 @@ int main(int argc, char** argv)
   glutInit(&argc, argv);
 
   gst_init(&argc, &argv);
-  for(int i = 0; i < 12; ++i){
+  for(int i = 0; i < kNumBells; ++i){
     play[i] = gst_element_factory_make("playbin", "play");
     char numstr[20];
     sprintf(numstr, "%d", i);
@@ -215,7 +217,7 @@ int main(int argc, char** argv)
 
   glutMainLoop();
 
-  for(int i = 0; i < 12; ++i) gst_element_set_state(play[i], GST_STATE_NULL);
+  for(int i = 0; i < kNumBells; ++i) gst_element_set_state(play[i], GST_STATE_NULL);
   gst_object_unref(GST_OBJECT(play));
 
   return 0;
@@ -243,14 +245,14 @@ void OnIdle()
   //    if(t-gStartTime > 200*i) gBells[i].Go();
   //  }
 
-  // 5.6 ticks per second -> 3hr peal speed on 12
-  int tick = (t-gStartTime)/178;
-  int lasttick = (LastUpdate-gStartTime)/178;
+  // 5.6 ticks per second -> 3hr peal speed
+  int tick = ((t-gStartTime)*kNumBells)/2143;
+  int lasttick = ((LastUpdate-gStartTime)*kNumBells)/2143;
   while(tick > lasttick){
     ++lasttick;
-    if(lasttick%12){ // Don't ring the treble
-      gBells[lasttick%12].Go(); // Just in case
-      gBells[lasttick%12].Pull();
+    if(lasttick%kNumBells){ // Don't ring the treble
+      gBells[lasttick%kNumBells].Go(); // Just in case
+      gBells[lasttick%kNumBells].Pull();
     }
   }
 
@@ -258,10 +260,10 @@ void OnIdle()
 
   if(dt < 0 || dt > 1) return;
 
-  for(int i = 0; i < 12; ++i)
+  for(int i = 0; i < kNumBells; ++i)
     gBells[i].Update(dt);
 
-  for(int i = 0; i < 12; ++i)
+  for(int i = 0; i < kNumBells; ++i)
     gRopes[i].Update(dt);
 
   if(keys.left) gLookAngle -= dt;
@@ -346,16 +348,16 @@ void OnDraw()
 
   glTranslated(0, 0, -5);
 
-  for(int n = 0; n < 12; ++n){
+  for(int n = 0; n < kNumBells; ++n){
 
     glPushMatrix();
 
-    glRotated(-n*30, 0, 0, 1);
+    glRotated(-n*360./kNumBells, 0, 0, 1);
     glTranslated(20, 0, 0);
 
     // Rotate back so that the "seam" on the sally is always in the same
     // place. Away from the camera.
-    glRotated(+n*30, 0, 0, 1);
+    glRotated(+n*360./kNumBells, 0, 0, 1);
 
     glBindTexture(GL_TEXTURE_2D, gRopeTex);
     glEnable(GL_TEXTURE_2D);
