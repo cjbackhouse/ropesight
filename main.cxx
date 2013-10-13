@@ -1,3 +1,9 @@
+// Large amplitude pendulum:
+// T = 2/pi*T0*ln(8/alpha_m)
+// alpha is angle to balance
+// T0 = 2pi sqrt(L/g)
+// http://iopscience.iop.org/0143-0807/33/6/1555
+
 #include "GL/glut.h"
 
 #include "keys.h"
