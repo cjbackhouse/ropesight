@@ -31,7 +31,7 @@ GMainLoop* loop;
 class Bell
 {
 public:
-  Bell() : fGone(false), fAngVel(0), fAngle(3), fHand(true), fPlaying(false)
+  Bell() : fGone(false), fAngVel(0), fAngle(3), fHand(true), fPlaying(false), fPulling(false)
   {
     // Gross hack to assign them correctly
     static int i = 0;
@@ -44,13 +44,32 @@ public:
   }
   void Update(double dt)
   {
+    const double g = 4;
+
     if(fGone){
-      fAngVel -= 4*dt*sin(fAngle);
+      fAngVel -= g*dt*sin(fAngle);
+
+      if(fPulling){
+	// Velocity that will cause the bell to come most of the way to the
+	// balance
+	const double target = sqrt(2*g*(cos(fAngle)-cos(3)));
+
+	if(fHand && fAngVel > -target){
+	  fAngVel -= dt;
+	}
+	if(!fHand && fAngVel < +target){
+	  fAngVel += dt;
+	}
+	if( fHand & fAngVel < -target) fPulling = false;
+	if(!fHand & fAngVel > +target) fPulling = false;
+      }
+
       fAngle += dt*fAngVel;
 
       if(fHand){
 	if(fAngle < 0){
 	  fHand = false;
+	  fPulling = false;
 	  gst_element_set_state(play[fBell], GST_STATE_PLAYING);
 	  fPlaying = true;
 	}
@@ -58,6 +77,7 @@ public:
       else{
 	if(fAngle > 0){
 	  fHand = true;
+	  fPulling = false;
 	  gst_element_set_state(play[fBell], GST_STATE_PLAYING);
 	  fPlaying = true;
 	}
@@ -71,6 +91,10 @@ public:
       }
     }
   }
+  void Pull()
+  {
+    fPulling = true;
+  }
   double Angle() const {return fAngle;}
   double ExtraRope() const {return fabs(fAngle-1);}
 protected:
@@ -80,6 +104,7 @@ protected:
   int fBell;
   bool fHand;
   bool fPlaying;
+  bool fPulling;
 };
 
 Bell gBells[12];
@@ -207,15 +232,29 @@ void OnIdle()
   if(once){
     once = false;
     gStartTime = glutGet(GLUT_ELAPSED_TIME);
+    LastUpdate = gStartTime;
   }
 
   long t = glutGet(GLUT_ELAPSED_TIME);
   double dt = (t-LastUpdate)/1000.0;
-  LastUpdate = t;
 
-  for(int i = 0; i < 12; ++i){
-    if(t-gStartTime > 200*i) gBells[i].Go();
+  // Old logic for pulling off
+  //  for(int i = 0; i < 12; ++i){
+  //    if(t-gStartTime > 200*i) gBells[i].Go();
+  //  }
+
+  // 5.6 ticks per second -> 3hr peal speed on 12
+  int tick = (t-gStartTime)/178;
+  int lasttick = (LastUpdate-gStartTime)/178;
+  while(tick > lasttick){
+    ++lasttick;
+    if(lasttick%12){ // Don't ring the treble
+      gBells[lasttick%12].Go(); // Just in case
+      gBells[lasttick%12].Pull();
+    }
   }
+
+  LastUpdate = t;
 
   if(dt < 0 || dt > 1) return;
 
@@ -391,6 +430,12 @@ void OnDraw()
 
 void OnKey(int key, bool state)
 {
+  // Key up
+  if(state == false && key == ' '){
+    gBells[0].Go(); // Just in case
+    gBells[0].Pull();
+  }
+
   switch(key)
   {
   case(GLUT_KEY_UP):    keys.up    = state; break;
