@@ -4,9 +4,41 @@ import gtk
 import os
 
 def OnStart(but):
+    pn = PlaceNotation()
     # TODO: doesn't work if gui is executed from wrong directory
-    os.system('./rsight &')
+    cmd = './rsight '+str(NumBells())+' '+PlaceNotation()+' '+str(PealTime())
+#    print cmd
+    os.system(cmd+' &')
     gtk.main_quit()
+
+def NumBells():
+    txt = stage.get_active_text()
+    if(txt == 'Doubles'): return 5
+    if(txt == 'Minor'):   return 6
+    if(txt == 'Triples'): return 7
+    if(txt == 'Major'):   return 8
+    assert False # Unknown stage
+
+def PlaceNotation():
+    meth = method.get_active_text()
+    num = NumBells()
+    if(meth == 'Plain Hunt'):
+        if(num == 5): return '5.1'
+        if(num == 6): return 'x16'
+        if(num == 7): return '7.1'
+        if(num == 8): return 'x18'
+    if(meth == 'Plain Bob'):
+        if(num == 5): return '5.1.5.1.5.1.5.1.5.125'
+        if(num == 6): return 'x16x16x16x16x16x12'
+        if(num == 7): return '7.1.7.1.7.1.7.1.7.1.7.1.7.127'
+        if(num == 8): return 'x18x18x18x18x18x18x18x12'
+    if(meth == 'Grandsire'):
+        if(num == 5): return '3.1.5.1.5.1.5.1.5.1'
+        if(num == 7): return '3.1.7.1.7.1.7.1.7.1.7.1.7.1'
+    assert False # Unknown method
+
+def PealTime():
+    return int(hours.get_value()*60+minutes.get_value())
 
 win = gtk.Window()
 win.set_title('Ropesight')
