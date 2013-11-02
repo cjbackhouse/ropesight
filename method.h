@@ -10,6 +10,7 @@ public:
   Method(int nbells, const std::string& notation);
   int BellAt(int tick);
 protected:
+  void ApplyChange();
   int CharToBell(char chr) const;
 
   int fTick;

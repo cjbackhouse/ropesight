@@ -7,42 +7,53 @@ Method::Method(int nbells, const std::string& notation)
     fNotation(notation)
 {
   for(int n = 0; n < nbells; ++n) fRow.push_back(n);
+
+  /*
+  for(int i = 0; i < 200; ++i){
+    ApplyChange();
+    for(int n = 0; n < nbells; ++n) std::cout << fRow[n]+1 << " ";
+    std::cout << std::endl;
+  }
+  */
 }
 
 int Method::BellAt(int tick)
 {
-  if(tick <= fTick){
-    //    std::cout << tick << " " << fRow[fRowPos] << std::endl;
-    return fRow[fRowPos];
-  }
+  if(tick <= fTick) return fRow[fRowPos];
 
   ++fRowPos;
   ++fTick;
   if(fRowPos == fRow.size()){
     fRowPos = 0;
-    if(fNotation != "-"){
-      if(fNotation[fNotationPos] == 'x'){
-	for(int i = 0; i < fRow.size()-2; i += 2) std::swap(fRow[i], fRow[i+1]);
-	++fNotationPos;
-      }
-      else{ // not an x
-	for(int i = 0; i < fRow.size()-2; i += 2){
-	  while(fNotationPos < fNotation.size() && CharToBell(fNotation[fNotationPos]) == i){
-	    ++fNotationPos;
-	    ++i;
-	  }
-	  std::swap(fRow[i], fRow[i+1]);
-	}
-	// Eat trailing numbers that were superfluous
-	while(fNotationPos < fNotation.size() && CharToBell(fNotation[fNotationPos] < 0)) ++fNotationPos;
-	// Eat a dot if there is one
-	if(fNotationPos < fNotation.size() && fNotation[fNotationPos] == '.') ++fNotationPos;
-      }
-      if(fNotationPos == fNotation.size()) fNotationPos = 0;
-    }
+    if(fNotation != "-") ApplyChange();
   }
-  //  std::cout << tick << " " << fRow[fRowPos] << std::endl;
+
   return fRow[fRowPos];
+}
+
+void Method::ApplyChange()
+{
+  if(fNotation[fNotationPos] == 'x'){
+    for(int i = 0; i < fRow.size()-1; i += 2) std::swap(fRow[i], fRow[i+1]);
+    ++fNotationPos;
+  }
+  else{ // not an x
+    for(int i = 0; i < fRow.size()-1; i += 2){
+      while(fNotationPos < fNotation.size() && CharToBell(fNotation[fNotationPos]) == i){
+	++fNotationPos;
+	++i;
+      }
+      std::swap(fRow[i], fRow[i+1]);
+    }
+    // Eat trailing numbers that were superfluous
+    while(fNotationPos < fNotation.size() && CharToBell(fNotation[fNotationPos]) >= 0){
+      ++fNotationPos;
+    }
+    // Eat a dot if there is one
+    if(fNotationPos < fNotation.size() && fNotation[fNotationPos] == '.') ++fNotationPos;
+  }
+
+  if(fNotationPos == fNotation.size()) fNotationPos = 0;
 }
 
 int Method::CharToBell(char chr) const
