@@ -9,6 +9,7 @@
 #include "keys.h"
 
 #include "Rope.h"
+#include "method.h"
 
 #include <cmath>
 #include <stdio.h>
@@ -35,6 +36,7 @@ int gNumBells = 8; // Default in case of no argument passed
 int gPealMins = 2*60+40;
 int gMyBell = 0;
 bool gAuto = false;
+Method* gMethod = 0;
 
 GstElement** play = 0;
 GMainLoop* loop;
@@ -133,12 +135,15 @@ int main(int argc, char** argv)
 
   std::cout << "Usage: " << argv[0] << " numBells notation pealMins bell auto" << std::endl;
 
+  std::string notation = "-";
+
   if(argc > 1) gNumBells = atoi(argv[1]);
-  if(argc > 2); // notation
+  if(argc > 2) notation = argv[2];
   if(argc > 3) gPealMins = atoi(argv[3]);
   if(argc > 4) gMyBell = atoi(argv[4])-1;
   if(argc > 5) gAuto = (std::string(argv[5]) == "1");
 
+  gMethod = new Method(gNumBells, notation);
   play = new GstElement*[gNumBells];
   gBells = new Bell[gNumBells];
   gRopes = new Rope[gNumBells];
@@ -264,18 +269,14 @@ void OnIdle()
   long t = glutGet(GLUT_ELAPSED_TIME);
   double dt = (t-LastUpdate)/1000.0;
 
-  // Old logic for pulling off
-  //  for(int i = 0; i < 12; ++i){
-  //    if(t-gStartTime > 200*i) gBells[i].Go();
-  //  }
-
   int tick = ((t-gStartTime)*gNumBells)*5040./(gPealMins*60*1000);
   int lasttick = ((LastUpdate-gStartTime)*gNumBells)*5040./(gPealMins*60*1000);
   while(tick >= lasttick){
     ++lasttick;
-    if(lasttick%gNumBells != gMyBell || gAuto){ // Don't ring user's bell
-      gBells[lasttick%gNumBells].Go(); // Just in case
-      gBells[lasttick%gNumBells].Pull();
+    const int bell = gMethod->BellAt(tick);
+    if(bell != gMyBell || gAuto){ // Don't ring user's bell
+      gBells[bell].Go(); // Just in case
+      gBells[bell].Pull();
     }
   }
 
@@ -286,15 +287,15 @@ void OnIdle()
   for(int i = 0; i < gNumBells; ++i)
     gBells[i].Update(dt);
 
-  for(int i = 0; i < gNumBells; ++i)
-    gRopes[i].Update(dt);
+  //  for(int i = 0; i < gNumBells; ++i)
+  //    gRopes[i].Update(dt);
 
   if(keys.left) gLookAngle -= dt;
   if(keys.right) gLookAngle += dt;
 
   glutPostRedisplay();
 
-  cout << int(1/dt) << " FPS\r" << flush;
+  //  cout << int(1/dt) << " FPS\r" << flush;
 
   while(g_main_context_iteration(0, false)){}
 }
@@ -456,7 +457,7 @@ void OnDraw()
 void OnKey(int key, bool state)
 {
   // Key up
-  if(state == false && key == ' '){
+  if(!gAuto && state == false && key == ' '){
     gBells[gMyBell].Go(); // Just in case
     gBells[gMyBell].Pull();
   }
