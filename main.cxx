@@ -132,7 +132,7 @@ int main(int argc, char** argv)
     // Major scale: tone, tone, semitone, tone, tone, tone, semitone etc
     int notes[12] = {20, 18, 16, 15, 13, 11, 9, 8, 6, 4, 3, 1};
     char numstr[20];
-    sprintf(numstr, "%d", notes[kNumBells-i-1]);
+    sprintf(numstr, "%d", notes[kNumBells-i-1]-notes[kNumBells-1]);
     g_object_set(G_OBJECT(play[i]), "uri", 
 		 (std::string("file:///home/bckhouse/Projects/Ropesight/audio/tbell_")+numstr+".wav").c_str(), NULL);
   }
