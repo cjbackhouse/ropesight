@@ -6,7 +6,7 @@ import os
 def OnStart(but):
     pn = PlaceNotation()
     # TODO: doesn't work if gui is executed from wrong directory
-    cmd = './rsight '+str(NumBells())+' '+PlaceNotation()+' '+str(PealTime())
+    cmd = './rsight '+str(NumBells())+' '+PlaceNotation()+' '+str(PealTime())+' '+str(Bell())+' '+str(Auto())
 #    print cmd
     os.system(cmd+' &')
     gtk.main_quit()
@@ -24,6 +24,8 @@ def NumBells():
 def PlaceNotation():
     meth = method.get_active_text()
     num = NumBells()
+    if meth == 'Rounds':
+        return '-'
     if meth == 'Plain Hunt':
         if num == 5:  return '5.1'
         if num == 6:  return 'x16'
@@ -49,6 +51,12 @@ def PlaceNotation():
 def PealTime():
     return int(hours.get_value()*60+minutes.get_value())
 
+def Bell():
+    return int(bell.get_value())
+
+def Auto():
+    return int(auto.get_active())
+
 win = gtk.Window()
 win.set_title('Ropesight')
 
@@ -64,10 +72,11 @@ hbox = gtk.HBox()
 hbox.pack_start(gtk.Label('Method:'), False)
 
 method = gtk.combo_box_new_text()
+method.append_text('Rounds')
 method.append_text('Plain Hunt')
 method.append_text('Plain Bob')
 method.append_text('Grandsire')
-method.set_active(0)
+method.set_active(1)
 hbox.add(method)
 
 stage = gtk.combo_box_new_text()
@@ -101,6 +110,20 @@ hbox2.add(minutes)
 hbox2.pack_start(gtk.Label('min'), False)
 
 vbox.add(hbox2)
+
+hbox4 = gtk.HBox()
+hbox4.pack_start(gtk.Label('Your bell:'), False)
+bell = gtk.SpinButton()
+bell.set_numeric(True)
+bell.set_range(1, 12)
+bell.set_value(2)
+bell.set_increments(1, 1)
+hbox4.add(bell)
+
+auto = gtk.CheckButton('AI')
+hbox4.add(auto)
+
+vbox.add(hbox4)
 
 hbox3 = gtk.HBox()
 hbox3.pack_end(start, False)

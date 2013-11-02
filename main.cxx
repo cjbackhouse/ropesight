@@ -32,6 +32,9 @@ void OnMotion(int, int);
 unsigned int gSallyTex, gRopeTex;
 
 int gNumBells = 8; // Default in case of no argument passed
+int gPealMins = 2*60+40;
+int gMyBell = 0;
+bool gAuto = false;
 
 GstElement** play = 0;
 GMainLoop* loop;
@@ -128,7 +131,13 @@ int main(int argc, char** argv)
 
   gst_init(&argc, &argv);
 
+  std::cout << "Usage: " << argv[0] << " numBells notation pealMins bell auto" << std::endl;
+
   if(argc > 1) gNumBells = atoi(argv[1]);
+  if(argc > 2); // notation
+  if(argc > 3) gPealMins = atoi(argv[3]);
+  if(argc > 4) gMyBell = atoi(argv[4])-1;
+  if(argc > 5) gAuto = (std::string(argv[5]) == "1");
 
   play = new GstElement*[gNumBells];
   gBells = new Bell[gNumBells];
@@ -260,12 +269,11 @@ void OnIdle()
   //    if(t-gStartTime > 200*i) gBells[i].Go();
   //  }
 
-  // 5.6 ticks per second -> 3hr peal speed
-  int tick = ((t-gStartTime)*gNumBells)/2143;
-  int lasttick = ((LastUpdate-gStartTime)*gNumBells)/2143;
-  while(tick > lasttick){
+  int tick = ((t-gStartTime)*gNumBells)*5040./(gPealMins*60*1000);
+  int lasttick = ((LastUpdate-gStartTime)*gNumBells)*5040./(gPealMins*60*1000);
+  while(tick >= lasttick){
     ++lasttick;
-    if(lasttick%gNumBells){ // Don't ring the treble
+    if(lasttick%gNumBells != gMyBell || gAuto){ // Don't ring user's bell
       gBells[lasttick%gNumBells].Go(); // Just in case
       gBells[lasttick%gNumBells].Pull();
     }
@@ -367,12 +375,12 @@ void OnDraw()
 
     glPushMatrix();
 
-    glRotated(-n*360./gNumBells, 0, 0, 1);
+    glRotated(-(n-gMyBell)*360./gNumBells, 0, 0, 1);
     glTranslated(20, 0, 0);
 
     // Rotate back so that the "seam" on the sally is always in the same
     // place. Away from the camera.
-    glRotated(+n*360./gNumBells, 0, 0, 1);
+    glRotated(+(n-gMyBell)*360./gNumBells, 0, 0, 1);
 
     glBindTexture(GL_TEXTURE_2D, gRopeTex);
     glEnable(GL_TEXTURE_2D);
@@ -449,8 +457,8 @@ void OnKey(int key, bool state)
 {
   // Key up
   if(state == false && key == ' '){
-    gBells[0].Go(); // Just in case
-    gBells[0].Pull();
+    gBells[gMyBell].Go(); // Just in case
+    gBells[gMyBell].Pull();
   }
 
   switch(key)
