@@ -13,28 +13,37 @@ def OnStart(but):
 
 def NumBells():
     txt = stage.get_active_text()
-    if(txt == 'Doubles'): return 5
-    if(txt == 'Minor'):   return 6
-    if(txt == 'Triples'): return 7
-    if(txt == 'Major'):   return 8
+    if txt == 'Doubles': return 5
+    if txt == 'Minor':   return 6
+    if txt == 'Triples': return 7
+    if txt == 'Major':   return 8
+    if txt == 'Royal':   return 10
+    if txt == 'Maximus': return 12
     assert False # Unknown stage
 
 def PlaceNotation():
     meth = method.get_active_text()
     num = NumBells()
-    if(meth == 'Plain Hunt'):
-        if(num == 5): return '5.1'
-        if(num == 6): return 'x16'
-        if(num == 7): return '7.1'
-        if(num == 8): return 'x18'
-    if(meth == 'Plain Bob'):
-        if(num == 5): return '5.1.5.1.5.1.5.1.5.125'
-        if(num == 6): return 'x16x16x16x16x16x12'
-        if(num == 7): return '7.1.7.1.7.1.7.1.7.1.7.1.7.127'
-        if(num == 8): return 'x18x18x18x18x18x18x18x12'
-    if(meth == 'Grandsire'):
-        if(num == 5): return '3.1.5.1.5.1.5.1.5.1'
-        if(num == 7): return '3.1.7.1.7.1.7.1.7.1.7.1.7.1'
+    if meth == 'Plain Hunt':
+        if num == 5:  return '5.1'
+        if num == 6:  return 'x16'
+        if num == 7:  return '7.1'
+        if num == 8:  return 'x18'
+        if num == 10: return 'x10'
+        if num == 12: return 'x1T'
+    if meth == 'Plain Bob':
+        if num == 5:  return '5.1.5.1.5.1.5.1.5.125'
+        if num == 6:  return 'x16x16x16x16x16x12'
+        if num == 7:  return '7.1.7.1.7.1.7.1.7.1.7.1.7.127'
+        if num == 8:  return 'x18x18x18x18x18x18x18x12'
+        if num == 10: return 'x10x10x10x10x10x10x10x10x10x12'
+        if num == 12: return 'x1Tx1Tx1Tx1Tx1Tx1Tx1Tx1Tx1Tx1Tx1Tx12'
+    if meth == 'Grandsire':
+        if num%2 == 0: num = num-1
+        if num == 5:  return '3.1.5.1.5.1.5.1.5.1'
+        if num == 7:  return '3.1.7.1.7.1.7.1.7.1.7.1.7.1'
+        if num == 9:  return '3.1.9.1.9.1.9.1.9.1.9.1.9.1.9.1.9.1'
+        if num == 11: return '3.1.E.1.E.1.E.1.E.1.E.1.E.1.E.1.E.1.E.1.E.1'
     assert False # Unknown method
 
 def PealTime():
@@ -66,6 +75,8 @@ stage.append_text('Doubles')
 stage.append_text('Minor')
 stage.append_text('Triples')
 stage.append_text('Major')
+stage.append_text('Royal')
+stage.append_text('Maximus')
 stage.set_active(1)
 hbox.add(stage)
 

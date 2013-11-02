@@ -31,9 +31,9 @@ void OnMotion(int, int);
 
 unsigned int gSallyTex, gRopeTex;
 
-const int kNumBells = 8;
+int gNumBells = 8; // Default in case of no argument passed
 
-GstElement* play[kNumBells] = {0,};
+GstElement** play = 0;
 GMainLoop* loop;
 
 class Bell
@@ -115,8 +115,8 @@ protected:
   bool fPulling;
 };
 
-Bell gBells[kNumBells];
-Rope gRopes[kNumBells];
+Bell* gBells;
+Rope* gRopes;
 
 long gStartTime;
 
@@ -127,12 +127,19 @@ int main(int argc, char** argv)
   glutInit(&argc, argv);
 
   gst_init(&argc, &argv);
-  for(int i = 0; i < kNumBells; ++i){
+
+  if(argc > 1) gNumBells = atoi(argv[1]);
+
+  play = new GstElement*[gNumBells];
+  gBells = new Bell[gNumBells];
+  gRopes = new Rope[gNumBells];
+
+  for(int i = 0; i < gNumBells; ++i){
     play[i] = gst_element_factory_make("playbin", "play");
     // Major scale: tone, tone, semitone, tone, tone, tone, semitone etc
     int notes[12] = {20, 18, 16, 15, 13, 11, 9, 8, 6, 4, 3, 1};
     char numstr[20];
-    sprintf(numstr, "%d", notes[kNumBells-i-1]-notes[kNumBells-1]);
+    sprintf(numstr, "%d", notes[gNumBells-i-1]-notes[gNumBells-1]);
     g_object_set(G_OBJECT(play[i]), "uri", 
 		 (std::string("file:///home/bckhouse/Projects/Ropesight/audio/tbell_")+numstr+".wav").c_str(), NULL);
   }
@@ -225,7 +232,7 @@ int main(int argc, char** argv)
 
   glutMainLoop();
 
-  for(int i = 0; i < kNumBells; ++i) gst_element_set_state(play[i], GST_STATE_NULL);
+  for(int i = 0; i < gNumBells; ++i) gst_element_set_state(play[i], GST_STATE_NULL);
   gst_object_unref(GST_OBJECT(play));
 
   return 0;
@@ -254,13 +261,13 @@ void OnIdle()
   //  }
 
   // 5.6 ticks per second -> 3hr peal speed
-  int tick = ((t-gStartTime)*kNumBells)/2143;
-  int lasttick = ((LastUpdate-gStartTime)*kNumBells)/2143;
+  int tick = ((t-gStartTime)*gNumBells)/2143;
+  int lasttick = ((LastUpdate-gStartTime)*gNumBells)/2143;
   while(tick > lasttick){
     ++lasttick;
-    if(lasttick%kNumBells){ // Don't ring the treble
-      gBells[lasttick%kNumBells].Go(); // Just in case
-      gBells[lasttick%kNumBells].Pull();
+    if(lasttick%gNumBells){ // Don't ring the treble
+      gBells[lasttick%gNumBells].Go(); // Just in case
+      gBells[lasttick%gNumBells].Pull();
     }
   }
 
@@ -268,10 +275,10 @@ void OnIdle()
 
   if(dt < 0 || dt > 1) return;
 
-  for(int i = 0; i < kNumBells; ++i)
+  for(int i = 0; i < gNumBells; ++i)
     gBells[i].Update(dt);
 
-  for(int i = 0; i < kNumBells; ++i)
+  for(int i = 0; i < gNumBells; ++i)
     gRopes[i].Update(dt);
 
   if(keys.left) gLookAngle -= dt;
@@ -356,16 +363,16 @@ void OnDraw()
 
   glTranslated(0, 0, -5);
 
-  for(int n = 0; n < kNumBells; ++n){
+  for(int n = 0; n < gNumBells; ++n){
 
     glPushMatrix();
 
-    glRotated(-n*360./kNumBells, 0, 0, 1);
+    glRotated(-n*360./gNumBells, 0, 0, 1);
     glTranslated(20, 0, 0);
 
     // Rotate back so that the "seam" on the sally is always in the same
     // place. Away from the camera.
-    glRotated(+n*360./kNumBells, 0, 0, 1);
+    glRotated(+n*360./gNumBells, 0, 0, 1);
 
     glBindTexture(GL_TEXTURE_2D, gRopeTex);
     glEnable(GL_TEXTURE_2D);
