@@ -121,7 +121,7 @@ protected:
 };
 
 Bell* gBells;
-Rope* gRopes;
+//Rope* gRopes;
 
 long gStartTime;
 
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
   gMethod = new Method(gNumBells, notation);
   play = new GstElement*[gNumBells];
   gBells = new Bell[gNumBells];
-  gRopes = new Rope[gNumBells];
+  //  gRopes = new Rope[gNumBells];
 
   for(int i = 0; i < gNumBells; ++i){
     play[i] = gst_element_factory_make("playbin", "play");
@@ -372,12 +372,22 @@ void OnDraw()
 
   glTranslated(0, 0, -5);
 
+  const int kCylinderDetail = 20;
+
+  const double kCircleRadius = 20;
+  const double kSallyHeight = 10;
+  const double kSallyEndHeight = 2;
+
+  const double kRopeRadius = .2;
+
+  const double kSallyBaseHeight = -40;
+
   for(int n = 0; n < gNumBells; ++n){
 
     glPushMatrix();
 
     glRotated(-(n-gMyBell)*360./gNumBells, 0, 0, 1);
-    glTranslated(20, 0, 0);
+    glTranslated(kCircleRadius, 0, 0);
 
     // Rotate back so that the "seam" on the sally is always in the same
     // place. Away from the camera.
@@ -386,15 +396,16 @@ void OnDraw()
     glBindTexture(GL_TEXTURE_2D, gRopeTex);
     glEnable(GL_TEXTURE_2D);
 
-    glTranslated(0, 0, -40+20*gBells[n].ExtraRope());
-    gRopes[n].SetTop(XYZ(0, 0, -40+20*gBells[n].ExtraRope()));
+    //    glTranslated(0, 0, -kRopeMaxHeight+20*gBells[n].ExtraRope());
+
+    //    gRopes[n].SetTop(XYZ(0, 0, -kRopeMaxHeight+20*gBells[n].ExtraRope()));
     //    gRopes[n].SetBottom(XYZ(2, 0, -40+20*gBells[n].ExtraRope()+5));
     //    gRopes[n].Draw();
 
     glBindTexture(GL_TEXTURE_2D, gSallyTex);
     glEnable(GL_TEXTURE_2D);
 
-    glTranslated(0, 0, -40+20*gBells[n].ExtraRope());
+    glTranslated(0, 0, kSallyBaseHeight+20*gBells[n].ExtraRope());
 
     glMatrixMode(GL_TEXTURE);
       glLoadIdentity();
@@ -402,11 +413,12 @@ void OnDraw()
       glRotated(-30, 0, 0, 1);
     glMatrixMode(GL_MODELVIEW); 
 
+    // Main sally piece
     GLUquadric* q = gluNewQuadric();
     gluQuadricTexture(q, GLU_TRUE);
     //    glColor3d(.5, 0, .5);
     glColor3d(1, 1, 1);
-    gluCylinder(q, 1, 1, 10, 20, 20);
+    gluCylinder(q, 1, 1, kSallyHeight, kCylinderDetail, kCylinderDetail);
 
     // Tops and bottoms
 
@@ -416,10 +428,11 @@ void OnDraw()
       glRotated(-45, 0, 0, 1);
     glMatrixMode(GL_MODELVIEW); 
 
-    glTranslated(0, 0, 10);
-    gluCylinder(q, 1, 0, 2, 20, 20);
-    glTranslated(0, 0, -12);
-    gluCylinder(q, 0, 1, 2, 20, 20);
+    // Ends of sally
+    glTranslated(0, 0, kSallyHeight);
+    gluCylinder(q, 1, 0, kSallyEndHeight, kCylinderDetail, kCylinderDetail);
+    glTranslated(0, 0, -kSallyHeight-kSallyEndHeight);
+    gluCylinder(q, 0, 1, kSallyEndHeight, kCylinderDetail, kCylinderDetail);
 
     // Rope
     //    glDisable(GL_TEXTURE_2D);
@@ -434,13 +447,15 @@ void OnDraw()
     glMatrixMode(GL_MODELVIEW); 
     */
 
+    // Downwards piece of rope
     glTranslated(0, 0, 5); // get inside sally
     glColor3d(.75, .75, 0);
-    gluCylinder(q, .2, .2, 80, 20, 20);
+    gluCylinder(q, kRopeRadius, kRopeRadius, 80, kCylinderDetail, kCylinderDetail);
 
-    glTranslated(0, 0, -40);
+    // Upwards piece of rope
+    glTranslated(0, 0, kSallyBaseHeight);
     glColor3d(.75, .75, 0);
-    gluCylinder(q, .2, .2, 100, 20, 40);
+    gluCylinder(q, kRopeRadius, kRopeRadius, 1000, kCylinderDetail, 40);
 
     gluDeleteQuadric(q);
 
