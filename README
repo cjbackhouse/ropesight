@@ -1,0 +1,30 @@
+Happy Birthday! Here is your present.
+
+Yes, the present is to get to watch quite a lot of terminal scrawl. I know you
+like that.
+
+# We'll need this first
+sudo apt-get install git
+
+# Get all the code
+git clone https://github.com/cjbackhouse/ropesight.git
+
+cd ropesight
+
+# Get all the other packages we need
+make prereq
+
+# Compile the C++ parts
+make
+
+Start the configuration screen
+./gui.py
+
+
+
+
+To update to new versions in future:
+
+cd ropesight
+git pull
+make
