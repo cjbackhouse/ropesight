@@ -30,6 +30,8 @@ void OnCharDn(unsigned char, int, int);
 void OnCharUp(unsigned char, int, int);
 void OnMotion(int, int);
 
+template<class T> T sqr(T x){return x*x;}
+
 unsigned int gSallyTex, gRopeTex;
 
 int gNumBells = 8; // Default in case of no argument passed
@@ -58,6 +60,8 @@ public:
   void Update(double dt)
   {
     const double g = 4;
+
+    //    const double g = 1/sqr(.5*log(0.2/8)/4);
 
     if(fGone){
       fAngVel -= g*dt*sin(fAngle);
@@ -328,7 +332,24 @@ void OnDraw()
 
   //  gluLookAt(40, 0, 0, 40-cos(gLookAngle), sin(gLookAngle), 0, 0, 0, 1);
 
-  gluLookAt(100, 0, 0, 40-cos(gLookAngle), sin(gLookAngle), 0, 0, 0, 1);
+  const int kCylinderDetail = 20;
+
+  // Units are cm
+  const double kCameraDistance = 300;//100;
+
+  const double kCircleRadius = 200;//20;
+  const double kSallyHeight = 80;
+  const double kSallyEndHeight = 10;//2;
+
+  const double kSallyRadius = 5;
+  const double kRopeRadius = 1;//.2;
+
+  const double kSallyBaseHeight = -350;
+  const double kTailEndLength = 150;
+
+  const double kRopeTravel = 150; // Related to wheel radius
+
+  gluLookAt(kCameraDistance, 0, 0, 0/*40-cos(gLookAngle)*/, sin(gLookAngle), 0, 0, 0, 1);
 
   /*
   glColor3d(.5, .5, .5);
@@ -370,17 +391,7 @@ void OnDraw()
   glEnd();
   */
 
-  glTranslated(0, 0, -5);
-
-  const int kCylinderDetail = 20;
-
-  const double kCircleRadius = 20;
-  const double kSallyHeight = 10;
-  const double kSallyEndHeight = 2;
-
-  const double kRopeRadius = .2;
-
-  const double kSallyBaseHeight = -40;
+  //  glTranslated(0, 0, -5);
 
   for(int n = 0; n < gNumBells; ++n){
 
@@ -405,7 +416,7 @@ void OnDraw()
     glBindTexture(GL_TEXTURE_2D, gSallyTex);
     glEnable(GL_TEXTURE_2D);
 
-    glTranslated(0, 0, kSallyBaseHeight+20*gBells[n].ExtraRope());
+    glTranslated(0, 0, kSallyBaseHeight+kRopeTravel*gBells[n].ExtraRope());
 
     glMatrixMode(GL_TEXTURE);
       glLoadIdentity();
@@ -418,7 +429,7 @@ void OnDraw()
     gluQuadricTexture(q, GLU_TRUE);
     //    glColor3d(.5, 0, .5);
     glColor3d(1, 1, 1);
-    gluCylinder(q, 1, 1, kSallyHeight, kCylinderDetail, kCylinderDetail);
+    gluCylinder(q, kSallyRadius, kSallyRadius, kSallyHeight, kCylinderDetail, kCylinderDetail);
 
     // Tops and bottoms
 
@@ -430,9 +441,9 @@ void OnDraw()
 
     // Ends of sally
     glTranslated(0, 0, kSallyHeight);
-    gluCylinder(q, 1, 0, kSallyEndHeight, kCylinderDetail, kCylinderDetail);
+    gluCylinder(q, kSallyRadius, 0, kSallyEndHeight, kCylinderDetail, kCylinderDetail);
     glTranslated(0, 0, -kSallyHeight-kSallyEndHeight);
-    gluCylinder(q, 0, 1, kSallyEndHeight, kCylinderDetail, kCylinderDetail);
+    gluCylinder(q, 0, kSallyRadius, kSallyEndHeight, kCylinderDetail, kCylinderDetail);
 
     // Rope
     //    glDisable(GL_TEXTURE_2D);
@@ -450,7 +461,7 @@ void OnDraw()
     // Downwards piece of rope
     glTranslated(0, 0, 5); // get inside sally
     glColor3d(.75, .75, 0);
-    gluCylinder(q, kRopeRadius, kRopeRadius, 80, kCylinderDetail, kCylinderDetail);
+    gluCylinder(q, kRopeRadius, kRopeRadius, kTailEndLength, kCylinderDetail, kCylinderDetail);
 
     // Upwards piece of rope
     glTranslated(0, 0, kSallyBaseHeight);
