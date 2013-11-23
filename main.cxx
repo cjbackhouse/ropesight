@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <unistd.h>
 
 #include <gst/gst.h>
 
@@ -158,8 +159,9 @@ int main(int argc, char** argv)
     int notes[12] = {20, 18, 16, 15, 13, 11, 9, 8, 6, 4, 3, 1};
     char numstr[20];
     sprintf(numstr, "%d", notes[gNumBells-i-1]-notes[gNumBells-1]);
+    char* cwd = getcwd(0, 0);
     g_object_set(G_OBJECT(play[i]), "uri", 
-		 (std::string("file:///home/bckhouse/Projects/Ropesight/audio/tbell_")+numstr+".wav").c_str(), NULL);
+		 (std::string("file://")+cwd+std::string("/audio/tbell_")+numstr+".wav").c_str(), NULL);
   }
   loop = g_main_loop_new(0, false);
 
