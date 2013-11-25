@@ -302,9 +302,11 @@ void OnIdle()
   while(tick >= lasttick){
     ++lasttick;
     const int bell = gMethod->BellAt(tick);
-    if(bell != gMyBell || gAuto){ // Don't ring user's bell
-      gBells[bell].Go(); // Just in case
-      gBells[bell].Pull();
+    if(bell >= 0){ // Ignore handstroke leads
+      if(bell != gMyBell || gAuto){ // Don't ring user's bell
+	gBells[bell].Go(); // Just in case
+	gBells[bell].Pull();
+      }
     }
   }
 

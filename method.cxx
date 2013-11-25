@@ -18,6 +18,12 @@ Method::Method(int nbells, const std::string& notation)
 
 int Method::BellAt(int tick)
 {
+  // Open handstroke lead
+  if(tick % (fRow.size()*2+1) == 0) return -1;
+
+  // Count how many handstroke leads there have been and correct for them
+  tick -= tick/(fRow.size()*2+1)+1;
+
   // Three whole pulls in rounds before go into changes. The first row of
   // "changes" is rounds the way this class thinks.
   const int kNumRoundsTicks = fRow.size()*5;
