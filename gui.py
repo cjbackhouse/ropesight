@@ -11,7 +11,8 @@ def OnStart(but):
     # TODO: doesn't work if gui is executed from wrong directory
     cmd = './rsight '+str(nb)+' '+PlaceNotation()+' '+str(PealTime())+' '+str(Bell())+' '+str(Auto())
     print cmd
-    os.system(cmd+' &')
+    win.hide()
+    os.system(cmd)
     gtk.main_quit()
 
 def NumBells():

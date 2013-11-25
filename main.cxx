@@ -300,6 +300,15 @@ void OnIdle()
   }
 
   long t = glutGet(GLUT_ELAPSED_TIME);
+
+  // Doesn't apply if user has control of the start
+  if(gMyBell != 0 || gAuto){
+    // Don't do anything in the first two seconds
+    if(t < 2000) return;
+    // Adjust clock to account for that
+    t -= 2000;
+  }
+
   double dt = (t-LastUpdate)/1000.0;
 
   // Allow for handstroke leads
