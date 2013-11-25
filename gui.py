@@ -5,8 +5,11 @@ import os
 
 def OnStart(but):
     pn = PlaceNotation()
+    # Add a tenor behind if necessary
+    nb = NumBells()
+    if nb%2 == 1: nb += 1
     # TODO: doesn't work if gui is executed from wrong directory
-    cmd = './rsight '+str(NumBells())+' '+PlaceNotation()+' '+str(PealTime())+' '+str(Bell())+' '+str(Auto())
+    cmd = './rsight '+str(nb)+' '+PlaceNotation()+' '+str(PealTime())+' '+str(Bell())+' '+str(Auto())
     print cmd
     os.system(cmd+' &')
     gtk.main_quit()

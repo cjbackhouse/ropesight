@@ -7,7 +7,6 @@ Method::Method(int nbells, const std::string& notation)
     fNotation(notation)
 {
   for(int n = 0; n < nbells; ++n) fRow.push_back(n);
-
   /*
   for(int i = 0; i < 200; ++i){
     ApplyChange();
@@ -28,6 +27,8 @@ int Method::BellAt(int tick)
     if(fNotation != "-") ApplyChange();
   }
 
+  std::cout << fRow[fRowPos]+1 << " ";
+  if(fRowPos == fRow.size()-1) std::cout << std::endl;
   return fRow[fRowPos];
 }
 
@@ -43,7 +44,8 @@ void Method::ApplyChange()
 	++fNotationPos;
 	++i;
       }
-      std::swap(fRow[i], fRow[i+1]);
+      // Don't swap last bell off the back
+      if(i < fRow.size()-1) std::swap(fRow[i], fRow[i+1]);
     }
     // Eat trailing numbers that were superfluous
     while(fNotationPos < fNotation.size() && CharToBell(fNotation[fNotationPos]) >= 0){
