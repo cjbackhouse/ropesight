@@ -87,8 +87,14 @@ public:
 	if(!fHand && fAngVel < +target){
 	  fAngVel += kPullForce*dt;
 	}
-	if( fHand & fAngVel < -target) fPulling = false;
-	if(!fHand & fAngVel > +target) fPulling = false;
+	if(fHand & fAngVel < -target){
+	  fPulling = false;
+	  fAngVel = -target;
+	}
+	if(!fHand & fAngVel > +target){
+	  fPulling = false;
+	  fAngVel = +target;
+	}
       }
 
       fAngle += dt*fAngVel;
