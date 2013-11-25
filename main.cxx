@@ -297,8 +297,11 @@ void OnIdle()
   long t = glutGet(GLUT_ELAPSED_TIME);
   double dt = (t-LastUpdate)/1000.0;
 
-  int tick = ((t-gStartTime)*gNumBells)*5040./(gPealMins*60*1000);
-  int lasttick = ((LastUpdate-gStartTime)*gNumBells)*5040./(gPealMins*60*1000);
+  // Allow for handstroke leads
+  const int kPealTicks = gNumBells*5040+5040/2;
+
+  int tick = (t-gStartTime)*kPealTicks/double(gPealMins*60*1000);
+  int lasttick = (LastUpdate-gStartTime)*kPealTicks/double(gPealMins*60*1000);
   while(tick >= lasttick){
     ++lasttick;
     const int bell = gMethod->BellAt(tick);
