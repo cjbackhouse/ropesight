@@ -39,6 +39,7 @@ int gNumBells = 8; // Default in case of no argument passed
 int gPealMins = 2*60+40;
 int gMyBell = 0;
 bool gAuto = false;
+bool gGo = true;
 Method* gMethod = 0;
 
 GstElement** play = 0;
@@ -170,6 +171,8 @@ int main(int argc, char** argv)
   if(argc > 4) gMyBell = atoi(argv[4])-1;
   if(argc > 5) gAuto = (std::string(argv[5]) == "1");
 
+  if(gMyBell == 0 && !gAuto) gGo = false; // If ringing treble, wait for me
+
   gMethod = new Method(gNumBells, notation);
   play = new GstElement*[gNumBells];
   gBells = new Bell[gNumBells];
@@ -286,6 +289,8 @@ using namespace std;
 void OnIdle()
 {
   while(g_main_context_iteration(0, false)){}
+
+  if(!gGo) return; // Wait for treble to pull off
 
   static bool once = true;
   if(once){
@@ -520,6 +525,7 @@ void OnKey(int key, bool state)
   if(!gAuto && state == false && key == ' '){
     gBells[gMyBell].Go(); // Just in case
     gBells[gMyBell].Pull();
+    if(gMyBell == 0) gGo = true;
   }
 
   switch(key)

@@ -20,6 +20,9 @@ make
 # Start the configuration screen
 ./gui.py
 
+The gui tool prints out the command-line it used to start the main rsight
+program with, so you can use that if you want to be able to quickly run again
+without tedious clicking.
 
 
 
@@ -43,7 +46,9 @@ Start out with some rounds to get the hang of the handling. I also found
 ringing plain hunt line over bells still in rounds helpful (mute your sound
 maybe, it's going to sound gross).
 
-If you select a method there will be three whole pulls of rounds first.
+If you select a method there will be three whole pulls of rounds first. The
+treble pulls off immediately, so be ready. If you're ringing the treble the
+other bells will wait for you to pull off.
 
 The computer ringers don't have very good striking right now. Maybe it's to
 make you focus on the ropesight. Or maybe it just needs to be fixed...
