@@ -207,7 +207,7 @@ int main(int argc, char** argv)
   glGenTextures(1, &gSallyTex);
   glGenTextures(1, &gRopeTex);
 
-  std::cout << "SALLY " << gSallyTex << std::endl;
+  //  std::cout << "SALLY " << gSallyTex << std::endl;
   glBindTexture(GL_TEXTURE_2D, gSallyTex);
 
   glEnable(GL_TEXTURE_2D);
@@ -234,7 +234,7 @@ int main(int argc, char** argv)
     }
   }
 
-  std::cout << "ROPE " << gRopeTex << std::endl;
+  //  std::cout << "ROPE " << gRopeTex << std::endl;
 
   glBindTexture(GL_TEXTURE_2D, gRopeTex);
   glEnable(GL_TEXTURE_2D);
@@ -311,9 +311,12 @@ void OnSize(int x, int y)
   glViewport(0, 0, x, y);
   glDrawBuffer(GL_BACK);
 
+  // Must be more than kCameraDistance+kCircleRadius
+  const double kMaxDistance = 1000;
+
   glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45, x/(y+1.0), 1, 512);
+    gluPerspective(45, x/(y+1.0), 1, kMaxDistance);
   glMatrixMode(GL_MODELVIEW);
 }
 
@@ -337,7 +340,13 @@ void OnDraw()
   const int kCylinderDetail = 20;
 
   // Units are cm
-  const double kCameraDistance = 300;//100;
+
+  // Have to stand crazy far back to see everything clearly. Eyes: how do they
+  // work?
+  const double kCameraDistance = 450;
+  // Have to stand aside slightly to see the rope on the other side of the
+  // circle
+  const double kAsideDistance = 20;
 
   const double kCircleRadius = 200;//20;
   const double kSallyHeight = 80;
@@ -346,12 +355,12 @@ void OnDraw()
   const double kSallyRadius = 5;
   const double kRopeRadius = 1;//.2;
 
-  const double kSallyBaseHeight = -350;
-  const double kTailEndLength = 150;
+  const double kSallyBaseHeight = -400;
+  const double kTailEndLength = 200;
 
-  const double kRopeTravel = 150; // Related to wheel radius
+  const double kRopeTravel = 175; // Related to wheel radius
 
-  gluLookAt(kCameraDistance, 0, 0, 0/*40-cos(gLookAngle)*/, sin(gLookAngle), 0, 0, 0, 1);
+  gluLookAt(kCameraDistance, kAsideDistance, 0, 0/*40-cos(gLookAngle)*/, kCameraDistance*sin(gLookAngle), 0, 0, 0, 1);
 
   /*
   glColor3d(.5, .5, .5);
@@ -404,10 +413,11 @@ void OnDraw()
 
     // Rotate back so that the "seam" on the sally is always in the same
     // place. Away from the camera.
-    glRotated(+(n-gMyBell)*360./gNumBells, 0, 0, 1);
+    glRotated(+(n-gMyBell)*360./gNumBells+90, 0, 0, 1);
 
-    glBindTexture(GL_TEXTURE_2D, gRopeTex);
-    glEnable(GL_TEXTURE_2D);
+    //    glBindTexture(GL_TEXTURE_2D, gRopeTex);
+    //    glEnable(GL_TEXTURE_2D);
+    //    glDisable(GL_TEXTURE_2D);
 
     //    glTranslated(0, 0, -kRopeMaxHeight+20*gBells[n].ExtraRope());
 
@@ -447,10 +457,10 @@ void OnDraw()
     glTranslated(0, 0, -kSallyHeight-kSallyEndHeight);
     gluCylinder(q, 0, kSallyRadius, kSallyEndHeight, kCylinderDetail, kCylinderDetail);
 
-    // Rope
-    //    glDisable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, gRopeTex);
-    glEnable(GL_TEXTURE_2D);
+    // Don't texture rope since we can't make it work right yet
+    glDisable(GL_TEXTURE_2D);
+    //glBindTexture(GL_TEXTURE_2D, gRopeTex);
+    //    glEnable(GL_TEXTURE_2D);
 
     /*
     glMatrixMode(GL_TEXTURE);
@@ -460,15 +470,10 @@ void OnDraw()
     glMatrixMode(GL_MODELVIEW); 
     */
 
-    // Downwards piece of rope
-    glTranslated(0, 0, 5); // get inside sally
+    // Rope
+    glTranslated(0, 0, -kTailEndLength);
     glColor3d(.75, .75, 0);
-    gluCylinder(q, kRopeRadius, kRopeRadius, kTailEndLength, kCylinderDetail, kCylinderDetail);
-
-    // Upwards piece of rope
-    glTranslated(0, 0, kSallyBaseHeight);
-    glColor3d(.75, .75, 0);
-    gluCylinder(q, kRopeRadius, kRopeRadius, 1000, kCylinderDetail, 40);
+    gluCylinder(q, kRopeRadius, kRopeRadius, 1000, kCylinderDetail, kCylinderDetail);
 
     gluDeleteQuadric(q);
 
@@ -510,5 +515,5 @@ void OnCharUp(unsigned char k, int x, int y){OnKey(k, false);}
 
 void OnMotion(int x, int y)
 {
-  gLookAngle = .0005*(x-1920/2);
+  gLookAngle = .00025*(x-1920/2);
 }
