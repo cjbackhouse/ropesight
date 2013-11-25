@@ -60,7 +60,12 @@ public:
   }
   void Update(double dt)
   {
-    const double g = 4;
+    // This is gravity, but the wheel radius and bell centre of mass are all
+    // mixed in. I fiddled with it so that the bells naturally go at such a
+    // speed that you can hunt out at 2h40 peal speed. The scaling with the
+    // square of the peal speed is what the formulae for large amplitude
+    // pendulums predicts, so should remain controllable at all speeds.
+    const double g = 12*sqr(160./gPealMins);
 
     //    const double g = 1/sqr(.5*log(0.2/8)/4);
 
@@ -70,13 +75,17 @@ public:
       if(fPulling){
 	// Velocity that will cause the bell to come most of the way to the
 	// balance
-	const double target = sqrt(2*g*(cos(fAngle)-cos(3)));
+	const double target = sqrt(2*g*(cos(fAngle)-cos(3.05)));
+
+	// Higher values make the bell respond more quickly to your pull, which
+	// makes it easier. But eventually it'll be unrealistic.
+	const double kPullForce = 3;
 
 	if(fHand && fAngVel > -target){
-	  fAngVel -= dt;
+	  fAngVel -= kPullForce*dt;
 	}
 	if(!fHand && fAngVel < +target){
-	  fAngVel += dt;
+	  fAngVel += kPullForce*dt;
 	}
 	if( fHand & fAngVel < -target) fPulling = false;
 	if(!fHand & fAngVel > +target) fPulling = false;
@@ -138,7 +147,7 @@ int main(int argc, char** argv)
 
   gst_init(&argc, &argv);
 
-  std::cout << "Usage: " << argv[0] << " numBells notation pealMins bell auto" << std::endl;
+  if(argc == 1) std::cout << "Usage: " << argv[0] << " numBells notation pealMins bell auto" << std::endl;
 
   std::string notation = "-";
 

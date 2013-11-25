@@ -7,7 +7,7 @@ def OnStart(but):
     pn = PlaceNotation()
     # TODO: doesn't work if gui is executed from wrong directory
     cmd = './rsight '+str(NumBells())+' '+PlaceNotation()+' '+str(PealTime())+' '+str(Bell())+' '+str(Auto())
-#    print cmd
+    print cmd
     os.system(cmd+' &')
     gtk.main_quit()
 
