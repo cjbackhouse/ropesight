@@ -18,6 +18,14 @@ Method::Method(int nbells, const std::string& notation)
 
 int Method::BellAt(int tick)
 {
+  // Three whole pulls in rounds before go into changes. The first row of
+  // "changes" is rounds the way this class thinks.
+  const int kNumRoundsTicks = fRow.size()*5;
+
+  if(tick < kNumRoundsTicks) return tick%fRow.size();
+
+  tick -= kNumRoundsTicks;
+
   if(tick <= fTick) return fRow[fRowPos];
 
   ++fRowPos;
