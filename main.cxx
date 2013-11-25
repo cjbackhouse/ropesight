@@ -47,7 +47,7 @@ GMainLoop* loop;
 class Bell
 {
 public:
-  Bell() : fGone(false), fAngVel(0), fAngle(3), fHand(true), fPlaying(false), fPulling(false)
+  Bell() : fGone(false), fAngVel(0), fAngle(3), fHand(true), fPulling(false), fPlaying(false)
   {
     // Gross hack to assign them correctly
     static int i = 0;
@@ -94,6 +94,14 @@ public:
       fAngle += dt*fAngVel;
 
       if(fHand){
+	// About to reach the bottom. Reset the sound so it'll be nice and ready to go again once we get there
+	if(fAngle < 1 && fAngVel < 0 && fPlaying){
+	  gst_element_set_state(play[fBell], GST_STATE_NULL);
+	  gst_element_seek(play[fBell], 1, GST_FORMAT_DEFAULT, GST_SEEK_FLAG_FLUSH, GST_SEEK_TYPE_SET, 0, GST_SEEK_TYPE_SET, -1);
+	  fPlaying = false;
+	}
+
+	// Bell strikes as it goes past the bottom, and you stop being able to pull at this stroke
 	if(fAngle < 0){
 	  fHand = false;
 	  fPulling = false;
@@ -102,19 +110,18 @@ public:
 	}
       }
       else{
+	if(fAngle > -1 && fAngVel > 0 && fPlaying){
+	  gst_element_set_state(play[fBell], GST_STATE_NULL);
+	  gst_element_seek(play[fBell], 1, GST_FORMAT_DEFAULT, GST_SEEK_FLAG_FLUSH, GST_SEEK_TYPE_SET, 0, GST_SEEK_TYPE_SET, -1);
+	  fPlaying = false;
+	}
+
 	if(fAngle > 0){
 	  fHand = true;
 	  fPulling = false;
 	  gst_element_set_state(play[fBell], GST_STATE_PLAYING);
 	  fPlaying = true;
 	}
-      }
-
-      // Try and "preload" the seeking
-      if(fPlaying && fabs(fAngle) > 2){
-	gst_element_set_state(play[fBell], GST_STATE_NULL);
-	gst_element_seek(play[fBell], 1, GST_FORMAT_DEFAULT, GST_SEEK_FLAG_FLUSH, GST_SEEK_TYPE_SET, 0, GST_SEEK_TYPE_SET, -1);
-	fPlaying = false;
       }
     }
   }
@@ -130,8 +137,8 @@ protected:
   double fAngle;
   int fBell;
   bool fHand;
-  bool fPlaying;
   bool fPulling;
+  bool fPlaying;
 };
 
 Bell* gBells;
