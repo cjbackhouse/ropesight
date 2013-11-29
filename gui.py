@@ -21,7 +21,9 @@ def NumBells():
     if txt == 'Minor':   return 6
     if txt == 'Triples': return 7
     if txt == 'Major':   return 8
+    if txt == 'Caters':  return 9
     if txt == 'Royal':   return 10
+    if txt == 'Cinques': return 11
     if txt == 'Maximus': return 12
     assert False # Unknown stage
 
@@ -50,6 +52,25 @@ def PlaceNotation():
         if num == 7:  return '3.1.7.1.7.1.7.1.7.1.7.1.7.1'
         if num == 9:  return '3.1.9.1.9.1.9.1.9.1.9.1.9.1.9.1.9.1'
         if num == 11: return '3.1.E.1.E.1.E.1.E.1.E.1.E.1.E.1.E.1.E.1.E.1'
+    if meth == 'Little Bob':
+        if num == 6:  return 'x16x14x16x12'
+        if num == 8:  return 'x18x14x18x12'
+        if num == 10: return 'x10x14x10x12'
+        if num == 12: return 'x1Tx14x1Tx12'
+    if meth == 'Stedman':
+        if num%2 == 0: num = num-1
+        if num == 5:  return '3.1.5.3.1.3.1.3.5.1.3.1'
+        if num == 7:  return '3.1.7.3.1.3.1.3.7.1.3.1'
+        if num == 9:  return '3.1.9.3.1.3.1.3.9.1.3.1'
+        if num == 11: return '3.1.E.3.1.3.1.3.E.1.3.1'
+    if meth == 'St Clement\'s':
+        if num == 6: return 'x16x36x36x36x16x12'
+    if meth == 'Kent':
+        if num == 6: return '14x14.16x12x16x12x16'
+        if num == 8: return '14x14.18x12x18x12x18x12x18x12x18'
+    if meth == 'Cambridge':
+        if num == 6: return 'x36x14x12x36x14x56x14x36x12x14x36x12'
+        if num == 8: return 'x36x14x1258x36x14x58x16x78x16x58x14x36x1258x14x38x12'
     assert False # Unknown method
 
 def PealTime():
@@ -80,6 +101,11 @@ method.append_text('Rounds')
 method.append_text('Plain Hunt')
 method.append_text('Plain Bob')
 method.append_text('Grandsire')
+method.append_text('Little Bob')
+method.append_text('Stedman')
+method.append_text('St Clement\'s')
+method.append_text('Kent')
+method.append_text('Cambridge')
 method.set_active(1)
 hbox.add(method)
 
@@ -88,7 +114,9 @@ stage.append_text('Doubles')
 stage.append_text('Minor')
 stage.append_text('Triples')
 stage.append_text('Major')
+stage.append_text('Caters')
 stage.append_text('Royal')
+stage.append_text('Cinques')
 stage.append_text('Maximus')
 stage.set_active(1)
 hbox.add(stage)
