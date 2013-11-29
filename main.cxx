@@ -6,9 +6,7 @@
 
 #include "GL/glut.h"
 
-#include "keys.h"
-
-#include "Rope.h"
+//#include "Rope.h"
 #include "method.h"
 
 #include <cassert>
@@ -21,8 +19,6 @@
 #include <unistd.h>
 
 #include <gst/gst.h>
-
-Keys keys;
 
 long LastUpdate;
 void OnIdle();
@@ -74,8 +70,6 @@ public:
     // square of the peal speed is what the formulae for large amplitude
     // pendulums predicts, so should remain controllable at all speeds.
     const double g = 12*sqr(160./gPealMins);
-
-    //    const double g = 1/sqr(.5*log(0.2/8)/4);
 
     if(fGone){
       fAngVel -= g*dt*sin(fAngle);
@@ -143,7 +137,6 @@ public:
   {
     fPulling = true;
   }
-  bool Pulling() const {return fPulling;}
   double Angle() const {return fAngle;}
   double AngVel() const {return fAngVel;}
   double ExtraRope() const {return fabs(fAngle-1);}
@@ -158,8 +151,6 @@ protected:
 };
 
 Bell* gBells;
-//Rope* gRopes;
-bool* pending;
 
 long gStartTime;
 
@@ -186,10 +177,9 @@ int main(int argc, char** argv)
   gMethod = new Method(gNumBells, notation);
   play = new GstElement*[gNumBells];
   gBells = new Bell[gNumBells];
-  pending = new bool[gNumBells];
-  for(int i = 0; i < gNumBells; ++i) pending[i] = false;
-  //  gRopes = new Rope[gNumBells];
 
+
+  // Load the training data
   FILE* f = fopen("train.txt", "r");
   while(!feof(f)){
     std::pair<int, int> key;
@@ -200,6 +190,8 @@ int main(int argc, char** argv)
   }
   fclose(f);
 
+
+  // Create the sound players for each bell
   for(int i = 0; i < gNumBells; ++i){
     play[i] = gst_element_factory_make("playbin", "play");
     // Major scale: tone, tone, semitone, tone, tone, tone, semitone etc
@@ -223,12 +215,10 @@ int main(int argc, char** argv)
   glutSpecialUpFunc(OnKeyUp);
   glutKeyboardFunc(OnCharDn);
   glutKeyboardUpFunc(OnCharUp);
-//  glutMouseFunc(OnClick);
-//  glutMotionFunc(OnDrag);
   glutPassiveMotionFunc(OnMotion);
-
   glutIdleFunc(OnIdle);
 
+  // Sally texture
   unsigned char tex[128][128][3];
   for(int x = 0; x < 128; ++x){
     for(int y = 0; y < 128; ++y){
@@ -264,7 +254,7 @@ int main(int argc, char** argv)
   glTexImage2D(GL_TEXTURE_2D, 0, 3, 128, 128, 0, GL_RGB, GL_UNSIGNED_BYTE, tex);
 
 
-
+  // Rope texture
   unsigned char texrope[128][128][3];
   for(int x = 0; x < 128; ++x){
     for(int y = 0; y < 128; ++y){
@@ -305,14 +295,6 @@ int main(int argc, char** argv)
   return 0;
 }
 
-void pullCallback(int bell)
-{
-  std::cout << "Pulling " << bell << std::endl;
-  gBells[bell].Go(); // Just in case
-  gBells[bell].Pull();
-  pending[bell] = false;
-}
-
 #include <iostream>
 using namespace std;
 void OnIdle()
@@ -329,21 +311,13 @@ void OnIdle()
   const double tickLen = double(gPealMins*60*1000)/kPealTicks;
 
   static bool once = true;
-  bool userPullOff = false;
+  bool userPullOff = false; // Handled specially below
   if(once){
     once = false;
     gStartTime = glutGet(GLUT_ELAPSED_TIME);
     LastUpdate = gStartTime;
 
     if(!gAuto && gMyBell == 0) userPullOff = true;
-  }
-
-  // Doesn't apply if user has control of the start
-  if(gMyBell != 0 || gAuto){
-    // Don't do anything in the first two seconds
-    //    if(t < 2000) return;
-    // Adjust clock to account for that
-    //    t -= 2000;
   }
 
   double dt = (t-LastUpdate)/1000.0;
@@ -357,14 +331,18 @@ void OnIdle()
 
   const int tick = (t-gStartTime)/tickLen;
 
+  // The sequence of times each bell is aiming to strike at
   static std::deque<double>* targets = 0;
   if(!targets){
     targets = new std::deque<double>[gNumBells];
   }
 
-  static int lasttick = -1;//(LastUpdate-gStartTime)/tickLen;
+  static int lasttick = -1;
 
+  // If the user is controlling the treble we need special logic to pull off
+  // after them
   if(userPullOff){
+    // Need to predict when the treble will strike
     std::pair<int, int> key(fabs(gBells[0].Angle())/M_PI*1000,
 			    (gBells[0].AngVel()*sign(gBells[0].Angle())/20+.5)*1000);
     for(int i = 1; i < gNumBells; ++i){
@@ -375,31 +353,41 @@ void OnIdle()
     // lasttick = gNumBells-1;
   }
 
+  // Make sure to process all the ticks even if we took a big time step and
+  // missed one
   while(tick > lasttick){
-    double late = (t-gStartTime-tick*tickLen)/1000.;
+    // How long ago this tick actually should have happened
+    const double late = (t-gStartTime-tick*tickLen)/1000.;
     ++lasttick;
     const int bell = gMethod->BellAt(tick);
     if(bell >= 0){ // Ignore handstroke leads
       if(bell != gMyBell || gAuto){ // Don't ring user's bell
+	// Set up targets 3 seconds in the future, so they should all be
+	// hittable
 	targets[bell].push_back(t/1000.-late+3);
-	//	std::cout << "Setting target " << bell << " " << t/1000.-late+1.2 << std::endl;
       }
     }
   }
   
+  // Check if any bells want to pull
   for(int bell = 0; bell < gNumBells; ++bell){
-    std::pair<int, int> key(fabs(gBells[bell].Angle())/M_PI*1000,
-			    (gBells[bell].AngVel()*sign(gBells[bell].Angle())/20+.5)*1000);
+    // This algebra matches what's in train.cxx
+    // Sign flips to convert to handstrokes
+    const std::pair<int, int> key(fabs(gBells[bell].Angle())/M_PI*1000,
+				  (gBells[bell].AngVel()*sign(gBells[bell].Angle())/20+.5)*1000);
     
-    //    std::cout << key.first << " " << key.second << std::endl;
+    // If there's no entry in the table it means that we think the bell is out
+    // of control. We're pretty screwed in that case.
     assert(training.find(key) != training.end());
 
+    // If the estimate for when the bell would strike if we started pulling is
+    // later than the target for it, then start pulling
     if(!targets[bell].empty() &&
        (t/1000.+training[key] > targets[bell].front())){
-      //       std::cout << t/1000. << " Pulling " << bell << " " << training[key] << std::endl;
-
       const double estLate = (t/1000.+training[key] - targets[bell].front());
 
+      // Not much we can do. Pull anyway. Hopefully just bad striking for one
+      // row
       if(estLate > .1){
 	std::cout << "Uh oh. Bell " << bell+1 << " expects to be " << estLate << "s late" << std::endl;
 	std::cout << "  Because its target is " <<  targets[bell].front() << " and it is now " << t/1000. << " with an estimated time to strike of " << training[key] << std::endl;
@@ -407,35 +395,11 @@ void OnIdle()
 
       gBells[bell].Go(); // Just in case
       gBells[bell].Pull();
+      // Don't need to hit this target again
       targets[bell].pop_front();
     }
   }
-
-  /*
-	if(!pending[bell]){
-	// Don't bother to pull twice
-	//	if(!gBells[bell].Pulling()){
-
-	std::cout << t << ": Will pull " << bell << " in " << (1.2-training[key]-late) << std::endl;
-	pending[bell] = true;
-	glutTimerFunc((1.2-training[key]-late)*1000, pullCallback, bell);
-	}
-  */
-
-	/*
-	  //	std::cout << key << std::endl;
-	  //	std::cout << training[key] << std::endl;
-	  if(training[key] < 0 || training[key]+late > 1.2){
-	    std::cout << bell << " " << training[key] << " " << late << " " << training[key]+late << std::endl;
-	    gBells[bell].Go(); // Just in case
-	    gBells[bell].Pull();
-	  }
-	}
-	*/
-  //      }
-  //    }
-  //}
-
+ 
   LastUpdate = t;
 
   for(int i = 0; i < gNumBells; ++i)
@@ -444,8 +408,8 @@ void OnIdle()
   //  for(int i = 0; i < gNumBells; ++i)
   //    gRopes[i].Update(dt);
 
-  if(keys.left) gLookAngle -= dt;
-  if(keys.right) gLookAngle += dt;
+  //  if(keys.left) gLookAngle -= dt;
+  //  if(keys.right) gLookAngle += dt;
 
   glutPostRedisplay();
 
@@ -483,7 +447,6 @@ void OnDraw()
 
   glLoadIdentity();
 
-  //  gluLookAt(40, 0, 0, 40-cos(gLookAngle), sin(gLookAngle), 0, 0, 0, 1);
 
   const int kCylinderDetail = 20;
 
@@ -508,7 +471,7 @@ void OnDraw()
 
   const double kRopeTravel = 175; // Related to wheel radius
 
-  gluLookAt(kCameraDistance, kAsideDistance, 0, 0/*40-cos(gLookAngle)*/, kCameraDistance*sin(gLookAngle), 0, 0, 0, 1);
+  gluLookAt(kCameraDistance, kAsideDistance, 0, 0, kCameraDistance*sin(gLookAngle), 0, 0, 0, 1);
 
   /*
   glColor3d(.5, .5, .5);
@@ -550,8 +513,6 @@ void OnDraw()
   glEnd();
   */
 
-  //  glTranslated(0, 0, -5);
-
   for(int n = 0; n < gNumBells; ++n){
 
     glPushMatrix();
@@ -587,7 +548,6 @@ void OnDraw()
     // Main sally piece
     GLUquadric* q = gluNewQuadric();
     gluQuadricTexture(q, GLU_TRUE);
-    //    glColor3d(.5, 0, .5);
     glColor3d(1, 1, 1);
     gluCylinder(q, kSallyRadius, kSallyRadius, kSallyHeight, kCylinderDetail, kCylinderDetail);
 
@@ -628,31 +588,22 @@ void OnDraw()
     glPopMatrix();
   }
 
-  //  glDisable(GL_TEXTURE_2D);
-  //  glDisable(GL_CULL_FACE);
-  //  gRope.Draw();
-
   glutSwapBuffers();
 }
 
 void OnKey(int key, bool state)
 {
   // Key up
-  if(!gAuto && state == false && key == ' '){
-    gBells[gMyBell].Go(); // Just in case
-    gBells[gMyBell].Pull();
-    if(gMyBell == 0) gGo = true;
-  }
 
   switch(key)
   {
-  case(GLUT_KEY_UP):    keys.up    = state; break;
-  case(GLUT_KEY_DOWN):  keys.down  = state; break;
-  case(GLUT_KEY_LEFT):  keys.left  = state; break;
-  case(GLUT_KEY_RIGHT): keys.right = state; break;
-  case('x'): keys.x     = state; break;
-  case('z'): keys.z     = state; break;
-  case(' '): keys.space = state; break;
+  case(' '):
+    if(!gAuto && state == false){
+      gBells[gMyBell].Go(); // Just in case
+      gBells[gMyBell].Pull();
+      if(gMyBell == 0) gGo = true;
+    }
+    break;
   case('q'): exit(0);
   }
 }
