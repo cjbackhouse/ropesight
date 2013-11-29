@@ -350,7 +350,10 @@ void OnIdle()
 
   // This will have bad consequences, but not as bad as letting the physics
   // engine take such a big time step.
-  if(dt < 0 || dt > .2) return;
+  if(dt < 0 || dt > .2){
+    LastUpdate = t;
+    return;
+  }
 
   const int tick = (t-gStartTime)/tickLen;
 
