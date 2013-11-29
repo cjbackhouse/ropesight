@@ -11,7 +11,10 @@
 #include "Rope.h"
 #include "method.h"
 
+#include <cassert>
 #include <cmath>
+#include <deque>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -44,6 +47,10 @@ Method* gMethod = 0;
 
 GstElement** play = 0;
 GMainLoop* loop;
+
+std::map<std::pair<int, int>, double> training;
+
+int sign(double x){return (x>=0) ? +1 : -1;}
 
 class Bell
 {
@@ -136,7 +143,9 @@ public:
   {
     fPulling = true;
   }
+  bool Pulling() const {return fPulling;}
   double Angle() const {return fAngle;}
+  double AngVel() const {return fAngVel;}
   double ExtraRope() const {return fabs(fAngle-1);}
 protected:
   bool fGone;
@@ -150,6 +159,7 @@ protected:
 
 Bell* gBells;
 //Rope* gRopes;
+bool* pending;
 
 long gStartTime;
 
@@ -176,7 +186,19 @@ int main(int argc, char** argv)
   gMethod = new Method(gNumBells, notation);
   play = new GstElement*[gNumBells];
   gBells = new Bell[gNumBells];
+  pending = new bool[gNumBells];
+  for(int i = 0; i < gNumBells; ++i) pending[i] = false;
   //  gRopes = new Rope[gNumBells];
+
+  FILE* f = fopen("train.txt", "r");
+  while(!feof(f)){
+    std::pair<int, int> key;
+    double junk;
+    double val;
+    int ret = fscanf(f, "%d %d %lf %lf %lf", &key.first, &key.second, &junk, &junk, &val);
+    if(val > 0) training[key] = val;
+  }
+  fclose(f);
 
   for(int i = 0; i < gNumBells; ++i){
     play[i] = gst_element_factory_make("playbin", "play");
@@ -283,6 +305,13 @@ int main(int argc, char** argv)
   return 0;
 }
 
+void pullCallback(int bell)
+{
+  std::cout << "Pulling " << bell << std::endl;
+  gBells[bell].Go(); // Just in case
+  gBells[bell].Pull();
+  pending[bell] = false;
+}
 
 #include <iostream>
 using namespace std;
@@ -292,40 +321,114 @@ void OnIdle()
 
   if(!gGo) return; // Wait for treble to pull off
 
-  static bool once = true;
-  if(once){
-    once = false;
-    gStartTime = glutGet(GLUT_ELAPSED_TIME);
-    LastUpdate = gStartTime;
-  }
-
   long t = glutGet(GLUT_ELAPSED_TIME);
-
-  // Doesn't apply if user has control of the start
-  if(gMyBell != 0 || gAuto){
-    // Don't do anything in the first two seconds
-    if(t < 2000) return;
-    // Adjust clock to account for that
-    t -= 2000;
-  }
-
-  double dt = (t-LastUpdate)/1000.0;
 
   // Allow for handstroke leads
   const int kPealTicks = gNumBells*5040+5040/2;
 
-  int tick = (t-gStartTime)*kPealTicks/double(gPealMins*60*1000);
-  int lasttick = (LastUpdate-gStartTime)*kPealTicks/double(gPealMins*60*1000);
-  while(tick >= lasttick){
+  const double tickLen = double(gPealMins*60*1000)/kPealTicks;
+
+  static bool once = true;
+  bool userPullOff = false;
+  if(once){
+    once = false;
+    gStartTime = glutGet(GLUT_ELAPSED_TIME);
+    LastUpdate = gStartTime;
+
+    if(!gAuto && gMyBell == 0) userPullOff = true;
+  }
+
+  // Doesn't apply if user has control of the start
+  if(gMyBell != 0 || gAuto){
+    // Don't do anything in the first two seconds
+    //    if(t < 2000) return;
+    // Adjust clock to account for that
+    //    t -= 2000;
+  }
+
+  double dt = (t-LastUpdate)/1000.0;
+
+  const int tick = (t-gStartTime)/tickLen;
+
+  static std::deque<double>* targets = 0;
+  if(!targets){
+    targets = new std::deque<double>[gNumBells];
+  }
+
+  static int lasttick = -1;//(LastUpdate-gStartTime)/tickLen;
+
+  if(userPullOff){
+    std::cout << "User pull off " << t/1000. << " " << tickLen << std::endl;
+    std::pair<int, int> key(fabs(gBells[0].Angle())/M_PI*1000,
+			    (gBells[0].AngVel()*sign(gBells[0].Angle())/20+.5)*1000);
+    for(int i = 1; i < gNumBells; ++i){
+      targets[i].push_back((t+i*tickLen)/1000.+training[key]);
+    }
+    // This makes everything go wrong. I don't know why. Just let this row be
+    // put in twice and recover from that.
+    // lasttick = gNumBells-1;
+  }
+
+  while(tick > lasttick){
+    double late = (t-gStartTime-tick*tickLen)/1000.;
     ++lasttick;
     const int bell = gMethod->BellAt(tick);
     if(bell >= 0){ // Ignore handstroke leads
       if(bell != gMyBell || gAuto){ // Don't ring user's bell
-	gBells[bell].Go(); // Just in case
-	gBells[bell].Pull();
+	targets[bell].push_back(t/1000.-late+3);
+	//	std::cout << "Setting target " << bell << " " << t/1000.-late+1.2 << std::endl;
       }
     }
   }
+  
+  for(int bell = 0; bell < gNumBells; ++bell){
+    std::pair<int, int> key(fabs(gBells[bell].Angle())/M_PI*1000,
+			    (gBells[bell].AngVel()*sign(gBells[bell].Angle())/20+.5)*1000);
+    
+    //    std::cout << key.first << " " << key.second << std::endl;
+    assert(training.find(key) != training.end());
+
+    if(!targets[bell].empty() &&
+       (t/1000.+training[key] > targets[bell].front())){
+      //       std::cout << t/1000. << " Pulling " << bell << " " << training[key] << std::endl;
+
+      const double estLate = (t/1000.+training[key] - targets[bell].front());
+
+      if(estLate > .1){
+	std::cout << "Uh oh. Bell " << bell+1 << " expects to be " << estLate << "s late" << std::endl;
+	std::cout << "  Because its target is " <<  targets[bell].front() << " and it is now " << t/1000. << " with an estimated time to strike of " << training[key] << std::endl;
+      }
+
+      gBells[bell].Go(); // Just in case
+      gBells[bell].Pull();
+      targets[bell].pop_front();
+    }
+  }
+
+  /*
+	if(!pending[bell]){
+	// Don't bother to pull twice
+	//	if(!gBells[bell].Pulling()){
+
+	std::cout << t << ": Will pull " << bell << " in " << (1.2-training[key]-late) << std::endl;
+	pending[bell] = true;
+	glutTimerFunc((1.2-training[key]-late)*1000, pullCallback, bell);
+	}
+  */
+
+	/*
+	  //	std::cout << key << std::endl;
+	  //	std::cout << training[key] << std::endl;
+	  if(training[key] < 0 || training[key]+late > 1.2){
+	    std::cout << bell << " " << training[key] << " " << late << " " << training[key]+late << std::endl;
+	    gBells[bell].Go(); // Just in case
+	    gBells[bell].Pull();
+	  }
+	}
+	*/
+  //      }
+  //    }
+  //}
 
   LastUpdate = t;
 

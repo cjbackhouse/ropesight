@@ -24,8 +24,6 @@ int main()
 
       bool pulling = true;
 
-      fprintf(f, "%d %d %lf %lf ", iang, ivel, ang, vel);
-
       while(true){
 	tott += dt;
 
@@ -52,12 +50,13 @@ int main()
 	ang += dt*vel;
       
 	if(ang < 0){
-	  fprintf(f, "%lf\n", tott);
+	  fprintf(f, "%d %d %lf %lf %lf\n", iang, ivel, ang, vel, tott);
 	  break;
 	}
 
 	if(ang > M_PI){
-	  fprintf(f, "-1\n");
+	  // Bell goes over the balance. Don't write anything, this situation
+	  // should never happen.
 	  break;
 	}
       } // end while
