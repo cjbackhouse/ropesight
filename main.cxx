@@ -20,7 +20,7 @@
 
 #include <gst/gst.h>
 
-long LastUpdate;
+double LastUpdate;
 void OnIdle();
 void OnDraw();
 void OnSize(int, int);
@@ -35,7 +35,8 @@ template<class T> T sqr(T x){return x*x;}
 unsigned int gSallyTex, gRopeTex;
 
 int gNumBells = 8; // Default in case of no argument passed
-int gPealMins = 2*60+40;
+const double kNominalPealMins = 2*60+40; // Scale things based on ratio to this
+int gPealMins = kNominalPealMins;
 int gMyBell = 0;
 bool gAuto = false;
 bool gGo = true;
@@ -66,10 +67,9 @@ public:
   {
     // This is gravity, but the wheel radius and bell centre of mass are all
     // mixed in. I fiddled with it so that the bells naturally go at such a
-    // speed that you can hunt out at 2h40 peal speed. The scaling with the
-    // square of the peal speed is what the formulae for large amplitude
-    // pendulums predicts, so should remain controllable at all speeds.
-    const double g = 12*sqr(160./gPealMins);
+    // speed that you can hunt out at 2h40 peal speed. The main loop cheats and
+    // makes it always look like that's the peal time to us.
+    const double g = 12;
 
     if(fGone){
       fAngVel -= g*dt*sin(fAngle);
@@ -152,7 +152,7 @@ protected:
 
 Bell* gBells;
 
-long gStartTime;
+double gStartTime;
 
 double gLookAngle = 0;
 
@@ -303,28 +303,31 @@ void OnIdle()
 
   if(!gGo) return; // Wait for treble to pull off
 
-  long t = glutGet(GLUT_ELAPSED_TIME);
+  // Cheating method of doing faster and slower peal speeds. Just lie to
+  // everyone about the time so they don't need to be aware of the difference.
+  const double t = glutGet(GLUT_ELAPSED_TIME)/1000.*kNominalPealMins/gPealMins;
 
   // Allow for handstroke leads
   const int kPealTicks = gNumBells*5040+5040/2;
 
-  const double tickLen = double(gPealMins*60*1000)/kPealTicks;
+  const double tickLen = double(kNominalPealMins*60)/kPealTicks;
 
   static bool once = true;
   bool userPullOff = false; // Handled specially below
   if(once){
     once = false;
-    gStartTime = glutGet(GLUT_ELAPSED_TIME);
+    gStartTime = t;
     LastUpdate = gStartTime;
 
     if(!gAuto && gMyBell == 0) userPullOff = true;
   }
 
-  double dt = (t-LastUpdate)/1000.0;
+  double dt = t-LastUpdate;
 
   // This will have bad consequences, but not as bad as letting the physics
   // engine take such a big time step.
-  if(dt < 0 || dt > .2){
+  if(dt < 0 || dt > .1){
+    std::cout << "Uh oh. Skipping a frame" << std::endl;
     LastUpdate = t;
     return;
   }
@@ -357,14 +360,14 @@ void OnIdle()
   // missed one
   while(tick > lasttick){
     // How long ago this tick actually should have happened
-    const double late = (t-gStartTime-tick*tickLen)/1000.;
+    const double late = t-gStartTime-tick*tickLen;
     ++lasttick;
     const int bell = gMethod->BellAt(tick);
     if(bell >= 0){ // Ignore handstroke leads
       if(bell != gMyBell || gAuto){ // Don't ring user's bell
 	// Set up targets 3 seconds in the future, so they should all be
 	// hittable
-	targets[bell].push_back(t/1000.-late+3);
+	targets[bell].push_back(t-late+3);
       }
     }
   }
@@ -382,21 +385,21 @@ void OnIdle()
 
     // If the estimate for when the bell would strike if we started pulling is
     // later than the target for it, then start pulling
-    if(!targets[bell].empty() &&
-       (t/1000.+training[key] > targets[bell].front())){
-      const double estLate = (t/1000.+training[key] - targets[bell].front());
+    if(!targets[bell].empty()){
+      const double estLate = (t+training[key] - targets[bell].front());
+      if(estLate > 0){
+	// Not much we can do. Pull anyway. Hopefully just bad striking for
+	// one row
+	if(estLate > .1){
+	  std::cout << "Uh oh. Bell " << bell+1 << " expects to be " << estLate << "s late" << std::endl;
+	  std::cout << "  Because its target is " <<  targets[bell].front() << " and it is now " << t << " with an estimated time to strike of " << training[key] << std::endl;
+	}
 
-      // Not much we can do. Pull anyway. Hopefully just bad striking for one
-      // row
-      if(estLate > .1){
-	std::cout << "Uh oh. Bell " << bell+1 << " expects to be " << estLate << "s late" << std::endl;
-	std::cout << "  Because its target is " <<  targets[bell].front() << " and it is now " << t/1000. << " with an estimated time to strike of " << training[key] << std::endl;
+	gBells[bell].Go(); // Just in case
+	gBells[bell].Pull();
+	// Don't need to hit this target again
+	targets[bell].pop_front();
       }
-
-      gBells[bell].Go(); // Just in case
-      gBells[bell].Pull();
-      // Don't need to hit this target again
-      targets[bell].pop_front();
     }
   }
  
@@ -459,12 +462,12 @@ void OnDraw()
   // circle
   const double kAsideDistance = 20;
 
-  const double kCircleRadius = 200;//20;
+  const double kCircleRadius = 200;;
   const double kSallyHeight = 80;
-  const double kSallyEndHeight = 10;//2;
+  const double kSallyEndHeight = 10;;
 
   const double kSallyRadius = 5;
-  const double kRopeRadius = 1;//.2;
+  const double kRopeRadius = 1;
 
   const double kSallyBaseHeight = -400;
   const double kTailEndLength = 200;
@@ -604,7 +607,9 @@ void OnKey(int key, bool state)
       if(gMyBell == 0) gGo = true;
     }
     break;
-  case('q'): exit(0);
+  case('q'):
+    std::cout << std::endl;
+    exit(0);
   }
 }
 
