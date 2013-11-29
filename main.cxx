@@ -305,7 +305,7 @@ void OnIdle()
 
   // Cheating method of doing faster and slower peal speeds. Just lie to
   // everyone about the time so they don't need to be aware of the difference.
-  const double t = glutGet(GLUT_ELAPSED_TIME)/1000.*kNominalPealMins/gPealMins;
+  const double tOrig = glutGet(GLUT_ELAPSED_TIME)/1000.*kNominalPealMins/gPealMins;
 
   // Allow for handstroke leads
   const int kPealTicks = gNumBells*5040+5040/2;
@@ -316,103 +316,111 @@ void OnIdle()
   bool userPullOff = false; // Handled specially below
   if(once){
     once = false;
-    gStartTime = t;
+    gStartTime = tOrig;
     LastUpdate = gStartTime;
 
     if(!gAuto && gMyBell == 0) userPullOff = true;
   }
 
-  double dt = t-LastUpdate;
+  const double dtOrig = tOrig-LastUpdate;
 
-  // This will have bad consequences, but not as bad as letting the physics
-  // engine take such a big time step.
-  if(dt < 0 || dt > .1){
-    std::cout << "Uh oh. Skipping a frame" << std::endl;
-    LastUpdate = t;
-    return;
-  }
+  // Run the physics simulation in 10x smaller steps than the graphics for
+  // stability
+  for(int sample = 0; sample < 10; ++sample){
+    const double t = tOrig-dtOrig+(sample+1)/10.*dtOrig;
+    const double dt = dtOrig/10;
 
-  const int tick = (t-gStartTime)/tickLen;
-
-  // The sequence of times each bell is aiming to strike at
-  static std::deque<double>* targets = 0;
-  if(!targets){
-    targets = new std::deque<double>[gNumBells];
-  }
-
-  static int lasttick = -1;
-
-  // If the user is controlling the treble we need special logic to pull off
-  // after them
-  if(userPullOff){
-    // Need to predict when the treble will strike
-    std::pair<int, int> key(fabs(gBells[0].Angle())/M_PI*1000,
-			    (gBells[0].AngVel()*sign(gBells[0].Angle())/20+.5)*1000);
-    for(int i = 1; i < gNumBells; ++i){
-      targets[i].push_back((t+i*tickLen)/1000.+training[key]);
+    // This will have bad consequences, but not as bad as letting the physics
+    // engine take such a big time step.
+    if(dt < 0 || dt > .1){
+      std::cout << "Uh oh. Skipping a frame" << std::endl;
+      LastUpdate = t;
+      return;
     }
-    // This makes everything go wrong. I don't know why. Just let this row be
-    // put in twice and recover from that.
-    // lasttick = gNumBells-1;
-  }
 
-  // Make sure to process all the ticks even if we took a big time step and
-  // missed one
-  while(tick > lasttick){
-    // How long ago this tick actually should have happened
-    const double late = t-gStartTime-tick*tickLen;
-    ++lasttick;
-    const int bell = gMethod->BellAt(tick);
-    if(bell >= 0){ // Ignore handstroke leads
-      if(bell != gMyBell || gAuto){ // Don't ring user's bell
-	// Set up targets 3 seconds in the future, so they should all be
-	// hittable
-	targets[bell].push_back(t-late+3);
+    const int tick = (t-gStartTime)/tickLen;
+
+    // The sequence of times each bell is aiming to strike at
+    static std::deque<double>* targets = 0;
+    if(!targets){
+      targets = new std::deque<double>[gNumBells];
+    }
+
+    static int lasttick = -1;
+
+    // If the user is controlling the treble we need special logic to pull off
+    // after them
+    if(userPullOff){
+      // Need to predict when the treble will strike
+      std::pair<int, int> key(fabs(gBells[0].Angle())/M_PI*1000,
+			      (gBells[0].AngVel()*sign(gBells[0].Angle())/20+.5)*1000);
+      for(int i = 1; i < gNumBells; ++i){
+	targets[i].push_back((t+i*tickLen)/1000.+training[key]);
       }
+      // This makes everything go wrong. I don't know why. Just let this row be
+      // put in twice and recover from that.
+      // lasttick = gNumBells-1;
     }
-  }
-  
-  // Check if any bells want to pull
-  for(int bell = 0; bell < gNumBells; ++bell){
-    // This algebra matches what's in train.cxx
-    // Sign flips to convert to handstrokes
-    const std::pair<int, int> key(fabs(gBells[bell].Angle())/M_PI*1000,
-				  (gBells[bell].AngVel()*sign(gBells[bell].Angle())/20+.5)*1000);
-    
-    // If there's no entry in the table it means that we think the bell is out
-    // of control. We're pretty screwed in that case.
-    assert(training.find(key) != training.end());
 
-    // If the estimate for when the bell would strike if we started pulling is
-    // later than the target for it, then start pulling
-    if(!targets[bell].empty()){
-      const double estLate = (t+training[key] - targets[bell].front());
-      if(estLate > 0){
-	// Not much we can do. Pull anyway. Hopefully just bad striking for
-	// one row
-	if(estLate > .1){
-	  std::cout << "Uh oh. Bell " << bell+1 << " expects to be " << estLate << "s late" << std::endl;
-	  std::cout << "  Because its target is " <<  targets[bell].front() << " and it is now " << t << " with an estimated time to strike of " << training[key] << std::endl;
+    // Make sure to process all the ticks even if we took a big time step and
+    // missed one
+    while(tick > lasttick){
+      // How long ago this tick actually should have happened
+      const double late = t-gStartTime-tick*tickLen;
+      ++lasttick;
+      const int bell = gMethod->BellAt(tick);
+      if(bell >= 0){ // Ignore handstroke leads
+	if(bell != gMyBell || gAuto){ // Don't ring user's bell
+	  // Set up targets 3 seconds in the future, so they should all be
+	  // hittable
+	  targets[bell].push_back(t-late+3);
 	}
-
-	gBells[bell].Go(); // Just in case
-	gBells[bell].Pull();
-	// Don't need to hit this target again
-	targets[bell].pop_front();
       }
     }
-  }
- 
-  LastUpdate = t;
+  
+    // Check if any bells want to pull
+    for(int bell = 0; bell < gNumBells; ++bell){
+      // This algebra matches what's in train.cxx
+      // Sign flips to convert to handstrokes
+      const std::pair<int, int> key(fabs(gBells[bell].Angle())/M_PI*1000,
+				    (gBells[bell].AngVel()*sign(gBells[bell].Angle())/20+.5)*1000);
+    
+      // If there's no entry in the table it means that we think the bell is
+      // out of control. We're pretty screwed in that case.
+      assert(training.find(key) != training.end());
 
-  for(int i = 0; i < gNumBells; ++i)
-    gBells[i].Update(dt);
+      // If the estimate for when the bell would strike if we started pulling
+      // is later than the target for it, then start pulling
+      if(!targets[bell].empty()){
+	const double estLate = (t+training[key] - targets[bell].front());
+	if(estLate > 0){
+	  // Not much we can do. Pull anyway. Hopefully just bad striking for
+	  // one row
+	  if(estLate > .1){
+	    std::cout << "Uh oh. Bell " << bell+1 << " expects to be " << estLate << "s late" << std::endl;
+	    std::cout << "  Because its target is " <<  targets[bell].front() << " and it is now " << t << " with an estimated time to strike of " << training[key] << std::endl;
+	  }
+
+	  gBells[bell].Go(); // Just in case
+	  gBells[bell].Pull();
+	  // Don't need to hit this target again
+	  targets[bell].pop_front();
+	}
+      }
+    }
+ 
+    LastUpdate = t;
+
+    for(int i = 0; i < gNumBells; ++i)
+      gBells[i].Update(dt);
 
   //  for(int i = 0; i < gNumBells; ++i)
   //    gRopes[i].Update(dt);
 
   //  if(keys.left) gLookAngle -= dt;
   //  if(keys.right) gLookAngle += dt;
+
+  } // end for sample
 
   glutPostRedisplay();
 
