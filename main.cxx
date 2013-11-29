@@ -348,6 +348,10 @@ void OnIdle()
 
   double dt = (t-LastUpdate)/1000.0;
 
+  // This will have bad consequences, but not as bad as letting the physics
+  // engine take such a big time step.
+  if(dt < 0 || dt > .2) return;
+
   const int tick = (t-gStartTime)/tickLen;
 
   static std::deque<double>* targets = 0;
@@ -358,7 +362,6 @@ void OnIdle()
   static int lasttick = -1;//(LastUpdate-gStartTime)/tickLen;
 
   if(userPullOff){
-    std::cout << "User pull off " << t/1000. << " " << tickLen << std::endl;
     std::pair<int, int> key(fabs(gBells[0].Angle())/M_PI*1000,
 			    (gBells[0].AngVel()*sign(gBells[0].Angle())/20+.5)*1000);
     for(int i = 1; i < gNumBells; ++i){
@@ -431,8 +434,6 @@ void OnIdle()
   //}
 
   LastUpdate = t;
-
-  if(dt < 0 || dt > 1) return;
 
   for(int i = 0; i < gNumBells; ++i)
     gBells[i].Update(dt);
