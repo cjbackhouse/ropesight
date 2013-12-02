@@ -355,7 +355,7 @@ void OnIdle()
       std::pair<int, int> key(fabs(gBells[0].Angle())/M_PI*1000,
 			      (gBells[0].AngVel()*sign(gBells[0].Angle())/20+.5)*1000);
       for(int i = 1; i < gNumBells; ++i){
-	targets[i].push_back((t+i*tickLen)/1000.+training[key]);
+	targets[i].push_back(t+i*tickLen+training[key]);
       }
       // This makes everything go wrong. I don't know why. Just let this row be
       // put in twice and recover from that.
