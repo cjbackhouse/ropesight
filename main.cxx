@@ -313,13 +313,21 @@ void OnIdle()
   const double tickLen = double(kNominalPealMins*60)/kPealTicks;
 
   static bool once = true;
-  bool userPullOff = false; // Handled specially below
   if(once){
     once = false;
     gStartTime = tOrig;
     LastUpdate = gStartTime;
 
-    if(!gAuto && gMyBell == 0) userPullOff = true;
+    // User was in control of the pull-off
+    if(!gAuto && gMyBell == 0){
+      // Need to predict when the treble will strike
+      std::pair<int, int> key(fabs(gBells[0].Angle())/M_PI*1000,
+			      (gBells[0].AngVel()*sign(gBells[0].Angle())/20+.5)*1000);
+
+      // And then fake up the start time so that the other bells will match
+      // that.
+      gStartTime = gStartTime - 3 + training[key];
+    }
   }
 
   const double dtOrig = tOrig-LastUpdate;
@@ -348,27 +356,14 @@ void OnIdle()
 
     static int lasttick = -1;
 
-    // If the user is controlling the treble we need special logic to pull off
-    // after them
-    if(userPullOff){
-      // Need to predict when the treble will strike
-      std::pair<int, int> key(fabs(gBells[0].Angle())/M_PI*1000,
-			      (gBells[0].AngVel()*sign(gBells[0].Angle())/20+.5)*1000);
-      for(int i = 1; i < gNumBells; ++i){
-	targets[i].push_back(t+i*tickLen+training[key]);
-      }
-      // This makes everything go wrong. I don't know why. Just let this row be
-      // put in twice and recover from that.
-      // lasttick = gNumBells-1;
-    }
-
     // Make sure to process all the ticks even if we took a big time step and
     // missed one
-    while(tick > lasttick){
+    while(tick >= lasttick){
       // How long ago this tick actually should have happened
-      const double late = t-gStartTime-tick*tickLen;
+      const double late = t-gStartTime-lasttick*tickLen;
       ++lasttick;
-      const int bell = gMethod->BellAt(tick);
+
+      const int bell = gMethod->BellAt(lasttick);
       if(bell >= 0){ // Ignore handstroke leads
 	if(bell != gMyBell || gAuto){ // Don't ring user's bell
 	  // Set up targets 3 seconds in the future, so they should all be
