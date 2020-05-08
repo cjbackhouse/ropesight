@@ -1,6 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-import gtk
+#import gtk
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk as gtk
+
 import os
 
 def OnStart(but):
@@ -10,7 +14,7 @@ def OnStart(but):
     if nb%2 == 1: nb += 1
     # TODO: doesn't work if gui is executed from wrong directory
     cmd = './rsight '+str(nb)+' '+PlaceNotation()+' '+str(PealTime())+' '+str(Bell())+' '+str(Auto())
-    print cmd
+    print(cmd)
     win.hide()
     os.system(cmd)
     gtk.main_quit()
@@ -85,18 +89,18 @@ def Auto():
 win = gtk.Window()
 win.set_title('Ropesight')
 
-start = gtk.Button('Start ringing!')
+start = gtk.Button(label='Start ringing!')
 img = gtk.Image()
-img.set_from_stock(gtk.STOCK_MEDIA_PLAY, 1)
+img.set_from_icon_name(gtk.STOCK_MEDIA_PLAY, 1) # doesn't show up in default ubuntu theme?
 start.set_image(img)
 
 vbox = gtk.VBox()
 
 hbox = gtk.HBox()
 
-hbox.pack_start(gtk.Label('Method:'), False)
+hbox.pack_start(gtk.Label(label='Method:'), False, True, 0)
 
-method = gtk.combo_box_new_text()
+method = gtk.ComboBoxText()
 method.append_text('Rounds')
 method.append_text('Plain Hunt')
 method.append_text('Plain Bob')
@@ -109,7 +113,7 @@ method.append_text('Cambridge')
 method.set_active(1)
 hbox.add(method)
 
-stage = gtk.combo_box_new_text()
+stage = gtk.ComboBoxText()
 stage.append_text('Doubles')
 stage.append_text('Minor')
 stage.append_text('Triples')
@@ -124,7 +128,7 @@ hbox.add(stage)
 vbox.add(hbox)
 
 hbox2 = gtk.HBox()
-hbox2.pack_start(gtk.Label('Peal speed:'), False)
+hbox2.pack_start(gtk.Label(label='Peal speed:'), False, True, 0)
 
 hours = gtk.SpinButton()
 hours.set_numeric(True)
@@ -132,19 +136,19 @@ hours.set_range(0, 5)
 hours.set_value(2)
 hours.set_increments(1, 1)
 hbox2.add(hours)
-hbox2.pack_start(gtk.Label('hr'), False)
+hbox2.pack_start(gtk.Label(label='hr'), False, True, 0)
 minutes = gtk.SpinButton()
 minutes.set_numeric(True)
 minutes.set_range(0, 59)
 minutes.set_value(40)
 minutes.set_increments(1, 10)
 hbox2.add(minutes)
-hbox2.pack_start(gtk.Label('min'), False)
+hbox2.pack_start(gtk.Label(label='min'), False, True, 0)
 
 vbox.add(hbox2)
 
 hbox4 = gtk.HBox()
-hbox4.pack_start(gtk.Label('Your bell:'), False)
+hbox4.pack_start(gtk.Label(label='Your bell:'), False, True, 0)
 bell = gtk.SpinButton()
 bell.set_numeric(True)
 bell.set_range(1, 12)
@@ -152,13 +156,13 @@ bell.set_value(2)
 bell.set_increments(1, 1)
 hbox4.add(bell)
 
-auto = gtk.CheckButton('AI')
+auto = gtk.CheckButton(label='AI')
 hbox4.add(auto)
 
 vbox.add(hbox4)
 
 hbox3 = gtk.HBox()
-hbox3.pack_end(start, False)
+hbox3.pack_end(start, False, True, 0)
 vbox.add(hbox3)
 
 win.add(vbox)
